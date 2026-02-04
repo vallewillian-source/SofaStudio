@@ -37,11 +37,10 @@ Rectangle {
         } else {
             // Fetch tables
             var tables = App.getTables(item.name)
-            var tableList = []
+            item.tables.clear()
             for (var i = 0; i < tables.length; i++) {
-                tableList.push({"name": tables[i]})
+                item.tables.append({"name": tables[i]})
             }
-            item.tables = tableList
             item.expanded = true
         }
     }
@@ -150,12 +149,12 @@ Rectangle {
                             
                             Text {
                                 text: "▦" // Table icon
-                                color: Theme.primary
+                                color: Theme.accent
                                 font.pixelSize: 12
                             }
                             
                             Text {
-                                text: modelData.name
+                                text: name
                                 color: Theme.textPrimary
                                 font.pixelSize: 13
                             }
@@ -167,7 +166,7 @@ Rectangle {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                root.tableClicked(modelData.name)
+                                root.tableClicked(name)
                             }
                         }
                     }

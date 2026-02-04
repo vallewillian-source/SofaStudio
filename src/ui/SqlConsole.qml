@@ -63,7 +63,7 @@ Item {
                         font.family: "Monospace" // TODO: Use a proper mono font
                         font.pixelSize: 13
                         color: Theme.textPrimary
-                        selectionColor: Theme.primary
+                        selectionColor: Theme.accent
                         selectedTextColor: "#FFFFFF"
                         selectByMouse: true
                         background: Rectangle { color: Theme.background }
