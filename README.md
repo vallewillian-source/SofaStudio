@@ -70,4 +70,4 @@ For detailed instructions and troubleshooting, see the [Getting Started Guide](d
 
 ## 📄 License
 
-This project is open source. See [LICENSE](LICENSE) for details.
+This project is open source. The code is licensed under the [LGPL-3.0 License](LICENSE).
