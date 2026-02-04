@@ -17,6 +17,13 @@ struct ConnectionData {
     QDateTime updatedAt;
 };
 
+struct QueryHistoryItem {
+    int id = -1;
+    int connectionId = -1;
+    QString query;
+    QDateTime createdAt;
+};
+
 class ILocalStoreService {
 public:
     virtual ~ILocalStoreService() = default;
@@ -25,6 +32,9 @@ public:
     virtual std::vector<ConnectionData> getAllConnections() = 0;
     virtual int saveConnection(const ConnectionData& data) = 0;
     virtual void deleteConnection(int id) = 0;
+    
+    virtual void saveQueryHistory(const QueryHistoryItem& item) = 0;
+    virtual std::vector<QueryHistoryItem> getQueryHistory(int connectionId) = 0;
 };
 
 }

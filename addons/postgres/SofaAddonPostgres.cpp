@@ -73,22 +73,47 @@ TableSchema PostgresCatalogProvider::getTableSchema(const QString& schema, const
 DatasetPage PostgresQueryProvider::execute(const QString& query, const DatasetRequest& request) {
     DatasetPage page;
     
-    // Mock columns
-    page.columns.push_back({"id", DataType::Integer, "int4"});
-    page.columns.push_back({"name", DataType::Text, "text"});
-    page.columns.push_back({"email", DataType::Text, "varchar"});
+    // Simple Mock Logic based on query content
+    QString q = query.toLower();
     
-    // Mock rows (10 rows)
-    for (int i = 0; i < 10; i++) {
+    if (q.contains("users")) {
+        page.columns.push_back({"id", DataType::Integer, "int4"});
+        page.columns.push_back({"name", DataType::Text, "text"});
+        page.columns.push_back({"email", DataType::Text, "varchar"});
+        page.columns.push_back({"role", DataType::Text, "varchar"});
+        
+        for (int i = 0; i < 25; i++) {
+            std::vector<QVariant> row;
+            row.push_back(i + 1);
+            row.push_back(QString("User %1").arg(i + 1));
+            row.push_back(QString("user%1@example.com").arg(i + 1));
+            row.push_back(i % 3 == 0 ? "admin" : "user");
+            page.rows.push_back(row);
+        }
+    } else if (q.contains("posts")) {
+        page.columns.push_back({"id", DataType::Integer, "int4"});
+        page.columns.push_back({"title", DataType::Text, "text"});
+        page.columns.push_back({"author_id", DataType::Integer, "int4"});
+        page.columns.push_back({"published", DataType::Boolean, "bool"});
+        
+        for (int i = 0; i < 50; i++) {
+            std::vector<QVariant> row;
+            row.push_back(i + 1);
+            row.push_back(QString("Post Title %1").arg(i + 1));
+            row.push_back((i % 10) + 1);
+            row.push_back(i % 2 == 0);
+            page.rows.push_back(row);
+        }
+    } else {
+        // Default generic result
+        page.columns.push_back({"result", DataType::Text, "text"});
         std::vector<QVariant> row;
-        row.push_back(i + 1);
-        row.push_back(QString("User %1").arg(i + 1));
-        row.push_back(QString("user%1@example.com").arg(i + 1));
+        row.push_back("Query executed successfully (Mock)");
         page.rows.push_back(row);
     }
     
     page.hasMore = false;
-    page.executionTimeMs = 15;
+    page.executionTimeMs = 15 + (rand() % 20);
     
     return page;
 }

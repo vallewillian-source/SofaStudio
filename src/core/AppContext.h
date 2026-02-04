@@ -42,6 +42,10 @@ public:
     Q_INVOKABLE void closeConnection();
     Q_INVOKABLE QStringList getSchemas();
     Q_INVOKABLE QStringList getTables(const QString& schema);
+    
+    // Query API
+    Q_INVOKABLE QVariantMap runQuery(const QString& queryText);
+    Q_INVOKABLE QVariantList getQueryHistory(int connectionId);
 
 signals:
     void connectionsChanged();

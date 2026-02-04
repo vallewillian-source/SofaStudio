@@ -1,5 +1,7 @@
 #include "AppContext.h"
 #include <QVariantMap>
+#include "addons/IAddon.h"
+#include "udm/UDM.h"
 
 namespace Sofa::Core {
 
@@ -243,6 +245,75 @@ QStringList AppContext::getTables(const QString& schema)
         for (const auto& t : tables) {
             list.append(t);
         }
+    }
+    return list;
+}
+
+QVariantMap AppContext::runQuery(const QString& queryText)
+{
+    QVariantMap result;
+    if (!m_currentConnection) {
+        result["error"] = "No active connection";
+        return result;
+    }
+    
+    auto queryProvider = m_currentConnection->query();
+    if (!queryProvider) {
+        result["error"] = "Connection does not support queries";
+        return result;
+    }
+    
+    // Save history
+    if (m_localStore && m_currentConnectionId != -1) {
+        QueryHistoryItem item;
+        item.connectionId = m_currentConnectionId;
+        item.query = queryText;
+        m_localStore->saveQueryHistory(item);
+    }
+    
+    DatasetRequest request; // default
+    DatasetPage page = queryProvider->execute(queryText, request);
+    
+    if (!page.warning.isEmpty()) {
+        result["warning"] = page.warning;
+    }
+    
+    result["executionTime"] = (double)page.executionTimeMs;
+    
+    QVariantList columns;
+    for (const auto& col : page.columns) {
+        QVariantMap colMap;
+        colMap["name"] = col.name;
+        colMap["type"] = col.rawType;
+        columns.append(colMap);
+    }
+    result["columns"] = columns;
+    
+    QVariantList rows;
+    for (const auto& row : page.rows) {
+        QVariantList rowList;
+        for (const auto& val : row) {
+            rowList.append(val);
+        }
+        rows.append(rowList);
+    }
+    result["rows"] = rows;
+    
+    return result;
+}
+
+QVariantList AppContext::getQueryHistory(int connectionId)
+{
+    QVariantList list;
+    if (!m_localStore) return list;
+    
+    auto history = m_localStore->getQueryHistory(connectionId);
+    for (const auto& item : history) {
+        QVariantMap map;
+        map["id"] = item.id;
+        map["query"] = item.query;
+        map["createdAt"] = item.createdAt;
+        list.append(map);
     }
     return list;
 }

@@ -1,5 +1,6 @@
 #include "DataGridEngine.h"
 #include <QString>
+#include <QVariantList>
 
 namespace Sofa::DataGrid {
 
@@ -103,6 +104,37 @@ double DataGridEngine::totalWidth() const
         w += col.displayWidth;
     }
     return w;
+}
+
+void DataGridEngine::loadFromVariant(const QVariantMap& data)
+{
+    clear();
+    
+    QVariantList columns = data["columns"].toList();
+    Sofa::Core::TableSchema schema;
+    
+    for (const auto& c : columns) {
+        QVariantMap map = c.toMap();
+        Sofa::Core::Column col;
+        col.name = map["name"].toString();
+        col.rawType = map["type"].toString();
+        col.type = Sofa::Core::DataType::Text; // Simplified
+        col.displayWidth = 150;
+        schema.columns.push_back(col);
+    }
+    setSchema(schema);
+    
+    QVariantList rows = data["rows"].toList();
+    std::vector<std::vector<QVariant>> newRows;
+    for (const auto& r : rows) {
+        QVariantList rowList = r.toList();
+        std::vector<QVariant> newRow;
+        for (const auto& val : rowList) {
+            newRow.push_back(val);
+        }
+        newRows.push_back(newRow);
+    }
+    setData(newRows);
 }
 
 }

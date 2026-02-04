@@ -2,6 +2,7 @@
 #include <QObject>
 #include <vector>
 #include <memory>
+#include <QVariantMap>
 #include "udm/UDM.h"
 
 namespace Sofa::DataGrid {
@@ -16,6 +17,7 @@ public:
     
     // Data Management
     Q_INVOKABLE void loadMockData(); // Helper for Etapa 7
+    Q_INVOKABLE void loadFromVariant(const QVariantMap& data);
     void setSchema(const Sofa::Core::TableSchema& schema);
     void setData(const std::vector<std::vector<QVariant>>& rows);
     void clear();

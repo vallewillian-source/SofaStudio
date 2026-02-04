@@ -28,6 +28,11 @@ ApplicationWindow {
         appTabs.currentIndex = tabModel.count - 1
     }
 
+    function openSqlConsole() {
+        tabModel.append({ "title": "SQL Console", "type": "sql" })
+        appTabs.currentIndex = tabModel.count - 1
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -46,6 +51,7 @@ ApplicationWindow {
             onTableClicked: function(tableName) {
                 openTable(tableName)
             }
+            onNewQueryClicked: openSqlConsole()
         }
 
         // Main Content Area
@@ -74,7 +80,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         
-                        sourceComponent: model.type === "home" ? homeComponent : tableComponent
+                        sourceComponent: model.type === "home" ? homeComponent : (model.type === "table" ? tableComponent : sqlComponent)
                         
                         // Pass properties to loaded item if needed
                         property string tableName: model.tableName || ""
@@ -84,6 +90,13 @@ ApplicationWindow {
         }
     }
     
+    Component {
+        id: sqlComponent
+        SqlConsole {
+            
+        }
+    }
+
     Component {
         id: homeComponent
         Rectangle {

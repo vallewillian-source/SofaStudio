@@ -16,6 +16,9 @@ public:
     int saveConnection(const ConnectionData& data) override;
     void deleteConnection(int id) override;
 
+    void saveQueryHistory(const QueryHistoryItem& item) override;
+    std::vector<QueryHistoryItem> getQueryHistory(int connectionId) override;
+
 private:
     std::shared_ptr<ILogger> m_logger;
     QString m_dbPath;

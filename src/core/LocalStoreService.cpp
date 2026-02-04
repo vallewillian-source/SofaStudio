@@ -65,6 +65,19 @@ void LocalStoreService::init()
     } else {
         m_logger->info("LocalStore initialized successfully");
     }
+
+    QString createHistoryTable = R"(
+        CREATE TABLE IF NOT EXISTS query_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            connection_id INTEGER,
+            query_text TEXT,
+            created_at DATETIME
+        )
+    )";
+
+    if (!query.exec(createHistoryTable)) {
+        m_logger->error("Failed to create query_history table: " + query.lastError().text());
+    }
 }
 
 std::vector<ConnectionData> LocalStoreService::getAllConnections()
@@ -98,16 +111,20 @@ int LocalStoreService::saveConnection(const ConnectionData& data)
 {
     auto db = getDatabase();
     if (!db.open()) return -1;
-
-    QSqlQuery query(db);
-    bool isUpdate = (data.id > 0);
     
-    if (isUpdate) {
-        query.prepare(R"(
-            UPDATE connections 
-            SET name = ?, host = ?, port = ?, database = ?, user = ?, secret_ref = ?, updated_at = ?
-            WHERE id = ?
-        )");
+    QSqlQuery query(db);
+    if (data.id == -1) {
+        query.prepare("INSERT INTO connections (name, host, port, database, user, secret_ref, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        query.addBindValue(data.name);
+        query.addBindValue(data.host);
+        query.addBindValue(data.port);
+        query.addBindValue(data.database);
+        query.addBindValue(data.user);
+        query.addBindValue(data.secretRef);
+        query.addBindValue(QDateTime::currentDateTime());
+        query.addBindValue(QDateTime::currentDateTime());
+    } else {
+        query.prepare("UPDATE connections SET name=?, host=?, port=?, database=?, user=?, secret_ref=?, updated_at=? WHERE id=?");
         query.addBindValue(data.name);
         query.addBindValue(data.host);
         query.addBindValue(data.port);
@@ -116,35 +133,24 @@ int LocalStoreService::saveConnection(const ConnectionData& data)
         query.addBindValue(data.secretRef);
         query.addBindValue(QDateTime::currentDateTime());
         query.addBindValue(data.id);
-    } else {
-        query.prepare(R"(
-            INSERT INTO connections (name, host, port, database, user, secret_ref, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        )");
-        query.addBindValue(data.name);
-        query.addBindValue(data.host);
-        query.addBindValue(data.port);
-        query.addBindValue(data.database);
-        query.addBindValue(data.user);
-        query.addBindValue(data.secretRef);
-        query.addBindValue(QDateTime::currentDateTime());
-        query.addBindValue(QDateTime::currentDateTime());
     }
-
-    if (!query.exec()) {
+    
+    if (query.exec()) {
+        if (data.id == -1) {
+            return query.lastInsertId().toInt();
+        }
+        return data.id;
+    } else {
         m_logger->error("Failed to save connection: " + query.lastError().text());
         return -1;
     }
-
-    if (isUpdate) return data.id;
-    return query.lastInsertId().toInt();
 }
 
 void LocalStoreService::deleteConnection(int id)
 {
     auto db = getDatabase();
     if (!db.open()) return;
-
+    
     QSqlQuery query(db);
     query.prepare("DELETE FROM connections WHERE id = ?");
     query.addBindValue(id);
@@ -152,6 +158,47 @@ void LocalStoreService::deleteConnection(int id)
     if (!query.exec()) {
         m_logger->error("Failed to delete connection: " + query.lastError().text());
     }
+}
+
+void LocalStoreService::saveQueryHistory(const QueryHistoryItem& item)
+{
+    auto db = getDatabase();
+    if (!db.open()) return;
+
+    QSqlQuery query(db);
+    query.prepare("INSERT INTO query_history (connection_id, query_text, created_at) VALUES (?, ?, ?)");
+    query.addBindValue(item.connectionId);
+    query.addBindValue(item.query);
+    query.addBindValue(QDateTime::currentDateTime());
+
+    if (!query.exec()) {
+        m_logger->error("Failed to save query history: " + query.lastError().text());
+    }
+}
+
+std::vector<QueryHistoryItem> LocalStoreService::getQueryHistory(int connectionId)
+{
+    std::vector<QueryHistoryItem> results;
+    auto db = getDatabase();
+    if (!db.open()) return results;
+
+    QSqlQuery query(db);
+    query.prepare("SELECT id, connection_id, query_text, created_at FROM query_history WHERE connection_id = ? ORDER BY created_at DESC LIMIT 50");
+    query.addBindValue(connectionId);
+
+    if (query.exec()) {
+        while (query.next()) {
+            QueryHistoryItem item;
+            item.id = query.value(0).toInt();
+            item.connectionId = query.value(1).toInt();
+            item.query = query.value(2).toString();
+            item.createdAt = query.value(3).toDateTime();
+            results.push_back(item);
+        }
+    } else {
+        m_logger->error("Failed to fetch query history: " + query.lastError().text());
+    }
+    return results;
 }
 
 }

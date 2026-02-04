@@ -8,6 +8,7 @@ Rectangle {
     
     property int currentConnectionId: -1
     signal tableClicked(string tableName)
+    signal newQueryClicked()
     
     function refresh() {
         schemaModel.clear()
@@ -67,14 +68,24 @@ Rectangle {
             Layout.preferredHeight: 40
             color: "transparent"
             
-            Text {
-                text: "EXPLORER"
-                font.bold: true
-                font.pixelSize: 11
-                color: Theme.textSecondary
-                anchors.left: parent.left
+            RowLayout {
+                anchors.fill: parent
                 anchors.leftMargin: Theme.spacingMedium
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.rightMargin: Theme.spacingMedium
+                
+                Text {
+                    text: "EXPLORER"
+                    font.bold: true
+                    font.pixelSize: 11
+                    color: Theme.textSecondary
+                    Layout.fillWidth: true
+                }
+                
+                AppButton {
+                    text: "SQL"
+                    Layout.preferredHeight: 24
+                    onClicked: root.newQueryClicked()
+                }
             }
         }
         
