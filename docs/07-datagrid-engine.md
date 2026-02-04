@@ -1,34 +1,51 @@
 # DataGrid Engine
 
-## Overview
+**Namespace**: `Sofa::DataGrid`
+**Path**: [src/datagrid/](file:///Users/vallewillian/www/sofa-studio/src/datagrid/)
 
-The DataGrid engine is a C++ state container and renderer that powers the QML grid. It separates data state from UI, keeping rendering fast and consistent across views.
+The DataGrid Engine is a high-performance, C++ based grid component designed to handle large datasets more efficiently than standard QML `TableView`.
 
-## Components
+## Architecture
 
-- DataGridEngine (C++): schema + rows + view state.
-- DataGridView (C++ QQuickPaintedItem): renders headers, cells, and selection.
-- DataGrid.qml (QML wrapper): provides a toolbar and scrollbars.
+The system is split into the **Engine** (Logic/Model) and the **View** (Rendering).
 
-## Data Flow
+### 1. DataGridEngine (The Model)
+**File:** [DataGridEngine.cpp](file:///Users/vallewillian/www/sofa-studio/src/datagrid/DataGridEngine.cpp)
 
-1. AppContext fetches datasets.
-2. DataGridEngine.loadFromVariant ingests columns and rows.
-3. DataGridView pulls data from the engine and renders on paint.
-4. Views are applied via DataGridEngine.applyView to update labels and visibility.
+A `QObject` subclass exposed to QML. It holds the "Single Source of Truth" for the grid data.
 
-## Rendering Model
+*   **State**:
+    *   `m_schema`: The `TableSchema` (columns, types).
+    *   `m_rows`: `std::vector<QVariantList>` (the actual data).
+    *   `m_viewSettings`: Active view configuration (column aliases, visibility, widths).
+*   **Methods**:
+    *   `loadFromVariant(QVariantMap)`: Parses the result from `AppContext` (UDM format) and populates the internal vectors.
+    *   `applyView(QVariantMap)`: Updates column metadata (labels, visibility) based on a saved view.
+    *   `rowCount()`, `columnCount()`, `data(row, col)`: Accessors for the renderer.
 
-- Headers render from column metadata.
-- Cells render row values from engine storage.
-- Scrolling is managed by QML scrollbars binding contentX/contentY.
+### 2. DataGridView (The Renderer)
+**File:** [DataGridView.cpp](file:///Users/vallewillian/www/sofa-studio/src/datagrid/DataGridView.cpp)
 
-## Grid Controls
+A `QQuickPaintedItem` subclass. This is where the pixels are drawn.
 
-- DataGrid.qml exposes controlsVisible to toggle the toolbar.
-- The toolbar includes Refresh, Wrap Text, and row count.
+*   **Painting Strategy**:
+    *   It does **not** create QML Items for cells (too heavy).
+    *   It overrides `paint(QPainter*)`.
+    *   It calculates which rows/columns are visible based on `contentX`, `contentY`, and `viewport` size.
+    *   It iterates only the visible cells and draws text/lines using `QPainter`.
+*   **Input Handling**:
+    *   Handles mouse clicks for cell selection.
+    *   Calculates row/column from X/Y coordinates.
 
-## Limitations
+### 3. QML Integration (`DataGrid.qml`)
+**File:** [DataGrid.qml](file:///Users/vallewillian/www/sofa-studio/src/ui/DataGrid.qml)
 
-- Wrap Text is present but not wired to layout changes yet.
-- Virtualized 2D paging is planned but not implemented in MVP.
+Combines the C++ Renderer with QML controls.
+*   **ScrollBars**: Standard `ScrollBar` controls are bound to the `DataGridView`'s `contentX`/`contentY`.
+*   **Toolbar**: Provides "Refresh", "Export" (future), and status info.
+
+## Key Features
+
+*   **Virtualization**: Only draws what is visible. Can handle 100k+ rows (memory permitting) with smooth scrolling.
+*   **View Support**: Columns can be hidden or renamed without modifying the underlying data.
+*   **Type Aware**: Renders different types differently (e.g., right-align numbers, special formatting for dates).
