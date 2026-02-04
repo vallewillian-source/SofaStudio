@@ -14,6 +14,7 @@ qt_add_qml_module(SofaUI
         Button.qml
         Theme.qml
         AppButton.qml
+        AppHeader.qml
         AppSidebar.qml
         AppTabs.qml
         ConnectionDialog.qml

@@ -40,70 +40,101 @@ ApplicationWindow {
         appTabs.currentIndex = tabModel.count - 1
     }
 
-    RowLayout {
+    ConnectionDialog {
+        id: connectionDialog
+        anchors.centerIn: Overlay.overlay
+    }
+
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // Left Sidebar
-        AppSidebar {
-            Layout.fillHeight: true
-            Layout.preferredWidth: Theme.sidebarWidth
-        }
-
-        // Database Explorer
-        DatabaseExplorer {
-            Layout.fillHeight: true
-            Layout.preferredWidth: 250
-            visible: App.activeConnectionId !== -1
-            onTableClicked: function(schema, tableName) {
-                openTable(schema, tableName)
+        // App Header (Connections)
+        AppHeader {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 35
+            
+            onRequestNewConnection: {
+                connectionDialog.resetFields()
+                connectionDialog.open()
             }
-            onNewQueryClicked: openSqlConsole()
+            
+            onRequestEditConnection: (id) => {
+                for (var i = 0; i < App.connections.length; i++) {
+                    if (App.connections[i].id === id) {
+                        connectionDialog.resetFields()
+                        connectionDialog.load(App.connections[i])
+                        connectionDialog.open()
+                        return
+                    }
+                }
+            }
+            
+            onRequestDeleteConnection: (id) => {
+                App.deleteConnection(id)
+            }
         }
 
-        // Main Content Area
-        ColumnLayout {
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 0
 
-            // Top Tabs
-            AppTabs {
-                id: appTabs
-                Layout.fillWidth: true
-                tabsModel: tabModel
+            // Database Explorer
+            DatabaseExplorer {
+                Layout.fillHeight: true
+                Layout.preferredWidth: 250
+                visible: App.activeConnectionId !== -1
+                onTableClicked: function(schema, tableName) {
+                    openTable(schema, tableName)
+                }
+                onNewQueryClicked: openSqlConsole()
             }
-            
-            // Content Area
-            StackLayout {
-                currentIndex: appTabs.currentIndex
+
+            // Main Content Area
+            ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                onCurrentIndexChanged: console.log("\u001b[35m🥞 StackLayout\u001b[0m", "index=" + currentIndex)
+                spacing: 0
+
+                // Top Tabs
+                AppTabs {
+                    id: appTabs
+                    Layout.fillWidth: true
+                    tabsModel: tabModel
+                }
                 
-                Repeater {
-                    model: tabModel
+                // Content Area
+                StackLayout {
+                    currentIndex: appTabs.currentIndex
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    onCurrentIndexChanged: console.log("\u001b[35m🥞 StackLayout\u001b[0m", "index=" + currentIndex)
                     
-                    Loader {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                    Repeater {
+                        model: tabModel
                         
-                        property string itemType: model.type || "home"
-                        property string itemSchema: model.schema || "public"
-                        property string itemTable: model.tableName || ""
-                        
-                        sourceComponent: itemType === "home" ? homeComponent : (itemType === "table" ? tableComponent : sqlComponent)
-                        
-                        onLoaded: {
-                            console.log("\u001b[36m🧭 Loader\u001b[0m", "index=" + index, "type=" + itemType, "schema=" + itemSchema, "table=" + itemTable)
-                            if (item && itemType === "table") {
-                                item.schema = itemSchema
-                                item.tableName = itemTable
-                                item.loadData()
+                        Loader {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            
+                            property string itemType: model.type || "home"
+                            property string itemSchema: model.schema || "public"
+                            property string itemTable: model.tableName || ""
+                            
+                            sourceComponent: itemType === "home" ? homeComponent : (itemType === "table" ? tableComponent : sqlComponent)
+                            
+                            onLoaded: {
+                                console.log("\u001b[36m🧭 Loader\u001b[0m", "index=" + index, "type=" + itemType, "schema=" + itemSchema, "table=" + itemTable)
+                                if (item && itemType === "table") {
+                                    item.schema = itemSchema
+                                    item.tableName = itemTable
+                                    item.loadData()
+                                }
                             }
+                            
+                            onItemTypeChanged: console.log("Loader type changed:", index, itemType)
                         }
-                        
-                        onItemTypeChanged: console.log("Loader type changed:", index, itemType)
                     }
                 }
             }
@@ -292,14 +323,6 @@ ApplicationWindow {
                         break
                     }
                 }
-                
-                // Reload grid with view applied
-                // Note: ideally we don't re-fetch data, just re-apply schema.
-                // But for now, let's just trigger a "refresh" of the engine schema if we have the data.
-                // Or simpler: loadData() again? No, expensive.
-                // Let's pass the viewDef to engine? 
-                // Engine doesn't know about JSON.
-                // We should parse viewDef and update gridEngine schema.
                 
                 if (gridEngine.columnCount > 0) {
                     gridEngine.applyView(viewDef ? JSON.stringify(viewDef) : "")
