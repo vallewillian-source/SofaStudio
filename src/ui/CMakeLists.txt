@@ -15,10 +15,11 @@ qt_add_qml_module(SofaUI
         Theme.qml
         AppButton.qml
         AppHeader.qml
-        AppSidebar.qml
-        AppTabs.qml
-        ConnectionDialog.qml
-        DatabaseExplorer.qml
+    AppSidebar.qml
+    AppTabs.qml
+    ConnectionDialog.qml
+    ConnectionForm.qml
+    DatabaseExplorer.qml
         DataGrid.qml
         SqlConsole.qml
         ViewEditor.qml

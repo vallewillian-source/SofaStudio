@@ -93,6 +93,54 @@ void LocalStoreService::init()
     if (!query.exec(createViewsTable)) {
         m_logger->error("Failed to create views table: " + query.lastError().text());
     }
+
+    QString createSettingsTable = R"(
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    )";
+
+    if (!query.exec(createSettingsTable)) {
+        m_logger->error("Failed to create settings table: " + query.lastError().text());
+    }
+}
+
+void LocalStoreService::saveSetting(const QString& key, const QVariant& value)
+{
+    auto db = getDatabase();
+    if (!db.isOpen() && !db.open()) return;
+
+    QSqlQuery query(db);
+    query.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (:key, :value)");
+    query.bindValue(":key", key);
+    
+    // Serialize complex types to JSON string if needed, or rely on QVariant string conversion
+    // For simple persistence, string is safest in SQLite
+    if (value.typeId() == QMetaType::QVariantList || value.typeId() == QMetaType::QVariantMap) {
+         // TODO: Use QJsonDocument if we had it included, but for now let's assume simple types or manual serialization
+         // Actually, let's include QJsonDocument to be safe
+    }
+    query.bindValue(":value", value.toString()); // Basic string conversion
+
+    if (!query.exec()) {
+        m_logger->error("Failed to save setting " + key + ": " + query.lastError().text());
+    }
+}
+
+QVariant LocalStoreService::getSetting(const QString& key, const QVariant& defaultValue)
+{
+    auto db = getDatabase();
+    if (!db.isOpen() && !db.open()) return defaultValue;
+
+    QSqlQuery query(db);
+    query.prepare("SELECT value FROM settings WHERE key = :key");
+    query.bindValue(":key", key);
+
+    if (query.exec() && query.next()) {
+        return query.value(0);
+    }
+    return defaultValue;
 }
 
 std::vector<ConnectionData> LocalStoreService::getAllConnections()

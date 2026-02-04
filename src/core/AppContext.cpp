@@ -1,6 +1,7 @@
 #include "AppContext.h"
 #include <QVariantMap>
 #include <QStringList>
+#include <QJsonDocument>
 #include "addons/IAddon.h"
 #include "udm/UDM.h"
 
@@ -121,6 +122,27 @@ bool AppContext::deleteConnection(int id)
 void AppContext::refreshConnections()
 {
     emit connectionsChanged();
+}
+
+void AppContext::saveAppState(const QVariantMap& state)
+{
+    if (!m_localStore) return;
+    
+    // Convert to JSON string for storage
+    QJsonDocument doc = QJsonDocument::fromVariant(state);
+    m_localStore->saveSetting("app_state", doc.toJson(QJsonDocument::Compact));
+}
+
+QVariantMap AppContext::loadAppState()
+{
+    if (!m_localStore) return {};
+    
+    QVariant val = m_localStore->getSetting("app_state");
+    if (val.isValid()) {
+        QJsonDocument doc = QJsonDocument::fromJson(val.toString().toUtf8());
+        return doc.toVariant().toMap();
+    }
+    return {};
 }
 
 QVariantList AppContext::availableDrivers() const

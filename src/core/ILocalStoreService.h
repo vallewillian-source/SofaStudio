@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <QDateTime>
+#include <QVariant>
 #include <vector>
 
 namespace Sofa::Core {
@@ -48,6 +49,10 @@ public:
     virtual int saveView(const ViewData& data) = 0;
     virtual std::vector<ViewData> getViews(int connectionId, const QString& sourceRef) = 0;
     virtual void deleteView(int id) = 0;
+
+    // Settings / Key-Value Store
+    virtual void saveSetting(const QString& key, const QVariant& value) = 0;
+    virtual QVariant getSetting(const QString& key, const QVariant& defaultValue = QVariant()) = 0;
 };
 
 }

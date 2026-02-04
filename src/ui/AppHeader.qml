@@ -4,7 +4,7 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    height: 30 // Keeping it slim as requested (close to 25px but usable)
+    height: 30
     color: Theme.surface
     border.color: Theme.border
     border.width: 1
@@ -12,6 +12,46 @@ Rectangle {
     signal requestNewConnection()
     signal requestEditConnection(var connectionId)
     signal requestDeleteConnection(var connectionId)
+
+    // Internal model for ComboBox
+    ListModel {
+        id: comboModel
+    }
+
+    function syncModel() {
+        var currentId = App.activeConnectionId
+        var currentIndexToSet = 0 // Default to "Selecione..."
+        
+        comboModel.clear()
+        
+        // 0: Selecione...
+        comboModel.append({ "id": -1, "name": "Selecione..", "type": "placeholder" })
+        
+        // Connections
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            var item = conns[i]
+            comboModel.append({ "id": item.id, "name": item.name, "type": "connection" })
+            if (item.id === currentId) {
+                currentIndexToSet = comboModel.count - 1
+            }
+        }
+        
+        // Last: New Connection...
+        comboModel.append({ "id": -999, "name": "Nova conexão...", "type": "action" })
+        
+        connSelector.currentIndex = currentIndexToSet
+    }
+
+    Component.onCompleted: {
+        syncModel()
+    }
+    
+    Connections {
+        target: App
+        function onConnectionsChanged() { syncModel() }
+        function onConnectionOpened(id) { syncModel() }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -32,7 +72,7 @@ Rectangle {
             id: connSelector
             Layout.preferredWidth: 200
             Layout.preferredHeight: 22
-            model: App.connections
+            model: comboModel
             textRole: "name"
             valueRole: "id"
             
@@ -55,38 +95,24 @@ Rectangle {
             }
             
             onActivated: (index) => {
-                // model is an array-like object from C++
-                // We need to access the object at index
-                // Since it's a QList<QObject*>, QML sees it as a list
-                var item = connSelector.model[index]
-                if (item) {
+                var item = comboModel.get(index)
+                if (item.type === "action") {
+                    // New Connection
+                    root.requestNewConnection()
+                    // Reset selection to previous valid or placeholder
+                    // For now, let's just let it be, the tab opening will handle focus
+                    // But maybe we should revert selection if user cancels?
+                    // Let's keep it simple.
+                    connSelector.currentIndex = 0 
+                } else if (item.type === "connection") {
                     App.openConnection(item.id)
-                }
-            }
-            
-            Connections {
-                target: App
-                function onConnectionOpened(id) {
-                    // Sync ComboBox
-                    for (var i = 0; i < connSelector.model.length; i++) {
-                        if (connSelector.model[i].id === id) {
-                            connSelector.currentIndex = i
-                            return
-                        }
-                    }
+                } else {
+                    // Placeholder selected
+                    App.closeConnection()
                 }
             }
         }
         
-        AppButton {
-            text: "+"
-            Layout.preferredHeight: 22
-            Layout.preferredWidth: 22
-            onClicked: root.requestNewConnection()
-            ToolTip.visible: hovered
-            ToolTip.text: "New Connection"
-        }
-
         AppButton {
             text: "✎"
             Layout.preferredHeight: 22

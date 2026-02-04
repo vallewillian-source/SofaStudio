@@ -13,6 +13,14 @@ Item {
     property string statusText: "Ready"
     property string errorMessage: ""
     property string requestTag: "sql"
+    property string queryText: "SELECT * FROM users LIMIT 10;"
+    signal queryTextEdited(string text)
+
+    function setQueryText(text) {
+        if (root.queryText !== text) {
+            root.queryText = text
+        }
+    }
     
     // SplitView for Editor (top) and Results (bottom)
     SplitView {
@@ -85,7 +93,7 @@ Item {
                         selectByMouse: true
                         background: Rectangle { color: Theme.background }
                         padding: 10
-                        text: "SELECT * FROM users LIMIT 10;"
+                        text: root.queryText
                         
                         Keys.onPressed: (event) => {
                             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & Qt.ControlModifier || event.modifiers & Qt.MetaModifier)) {
@@ -97,6 +105,13 @@ Item {
                                     App.cancelActiveQuery();
                                     event.accepted = true;
                                 }
+                            }
+                        }
+                        
+                        onTextChanged: {
+                            if (root.queryText !== text) {
+                                root.queryText = text
+                                root.queryTextEdited(text)
                             }
                         }
                     }

@@ -11,6 +11,8 @@ ApplicationWindow {
     title: qsTr("Sofa Studio")
     color: Theme.background
     
+    property bool isRestoring: false
+
     ListModel {
         id: tabModel
         ListElement { 
@@ -18,6 +20,8 @@ ApplicationWindow {
             type: "home"
             schema: ""
             tableName: ""
+            connectionId: -1
+            sqlText: ""
         }
     }
     
@@ -35,16 +39,137 @@ ApplicationWindow {
         appTabs.currentIndex = tabModel.count - 1
     }
 
-    function openSqlConsole() {
-        tabModel.append({ "title": "SQL Console", "type": "sql" })
+    function openConnectionTab(connectionId) {
+        var title = connectionId === -1 ? "New Connection" : "Edit Connection"
+        
+        // Check if already open
+        for (var i = 0; i < tabModel.count; i++) {
+            var item = tabModel.get(i)
+            if (item.type === "connection_form" && item.connectionId === connectionId) {
+                appTabs.currentIndex = i
+                return
+            }
+        }
+        
+        tabModel.append({ 
+            "title": title, 
+            "type": "connection_form",
+            "connectionId": connectionId
+        })
         appTabs.currentIndex = tabModel.count - 1
     }
 
-    ConnectionDialog {
-        id: connectionDialog
-        anchors.centerIn: Overlay.overlay
+    function openSqlConsole(initialText) {
+        var baseTitle = "SQL"
+        var title = baseTitle
+        var suffix = 1
+        var exists = true
+        while (exists) {
+            exists = false
+            for (var i = 0; i < tabModel.count; i++) {
+                if (tabModel.get(i).title === title) {
+                    exists = true
+                    suffix += 1
+                    title = baseTitle + " " + suffix
+                    break
+                }
+            }
+        }
+        tabModel.append({ "title": title, "type": "sql", "sqlText": initialText || "" })
+        appTabs.currentIndex = tabModel.count - 1
     }
 
+    function saveState() {
+        if (isRestoring) {
+            return
+        }
+
+        var tabs = []
+        for (var i = 0; i < tabModel.count; i++) {
+            var item = tabModel.get(i)
+            if (item.type !== "home") {
+                var tabData = {
+                    "title": item.title,
+                    "type": item.type,
+                    "schema": item.schema || "",
+                    "tableName": item.tableName || "",
+                    "connectionId": item.connectionId || -1
+                }
+                if (item.type === "sql") {
+                    tabData.sqlText = item.sqlText || ""
+                }
+                tabs.push(tabData)
+            }
+        }
+        
+        var state = {
+            "lastConnectionId": App.activeConnectionId,
+            "openTabs": tabs
+        }
+        
+        App.saveAppState(state)
+    }
+
+    function restoreState() {
+        isRestoring = true
+        var state = App.loadAppState()
+        
+        if (state && state.lastConnectionId !== undefined) {
+            if (state.lastConnectionId !== -1) {
+                App.openConnection(state.lastConnectionId)
+            }
+        }
+        
+        if (state && state.openTabs && state.openTabs.length > 0) {
+            for (var i = 0; i < state.openTabs.length; i++) {
+                var tab = state.openTabs[i]
+                
+                // Construct a clean object for the model
+                var newTab = {
+                    "title": tab.title || "Untitled",
+                    "type": tab.type || "home",
+                    "schema": tab.schema || "public",
+                    "tableName": tab.tableName || "",
+                    "connectionId": tab.connectionId !== undefined ? tab.connectionId : -1,
+                    "sqlText": tab.sqlText || ""
+                }
+                
+                tabModel.append(newTab)
+            }
+            if (tabModel.count > 1) {
+                appTabs.currentIndex = tabModel.count - 1
+            }
+        }
+        isRestoring = false
+    }
+
+    Component.onCompleted: {
+        restoreState()
+    }
+
+    Connections {
+        target: App
+        function onActiveConnectionIdChanged() { 
+            saveState() 
+        }
+    }
+    
+    Connections {
+        target: tabModel
+        function onCountChanged() { 
+            saveState() 
+        }
+    }
+    
+    Connections {
+        target: tabModel
+        function onDataChanged() {
+            saveState()
+        }
+    }
+
+    // ConnectionDialog removed, using ConnectionForm in tabs
+    
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -55,19 +180,11 @@ ApplicationWindow {
             Layout.preferredHeight: 35
             
             onRequestNewConnection: {
-                connectionDialog.resetFields()
-                connectionDialog.open()
+                openConnectionTab(-1)
             }
             
             onRequestEditConnection: (id) => {
-                for (var i = 0; i < App.connections.length; i++) {
-                    if (App.connections[i].id === id) {
-                        connectionDialog.resetFields()
-                        connectionDialog.load(App.connections[i])
-                        connectionDialog.open()
-                        return
-                    }
-                }
+                openConnectionTab(id)
             }
             
             onRequestDeleteConnection: (id) => {
@@ -130,8 +247,9 @@ ApplicationWindow {
                             property string itemType: model.type || "home"
                             property string itemSchema: model.schema || "public"
                             property string itemTable: model.tableName || ""
+                            property string itemSqlText: model.sqlText || ""
                             
-                            sourceComponent: itemType === "home" ? homeComponent : (itemType === "table" ? tableComponent : sqlComponent)
+                            sourceComponent: itemType === "home" ? homeComponent : (itemType === "table" ? tableComponent : (itemType === "connection_form" ? connectionFormComponent : sqlComponent))
                             
                             onLoaded: {
                                 console.log("\u001b[36m🧭 Loader\u001b[0m", "index=" + index, "type=" + itemType, "schema=" + itemSchema, "table=" + itemTable)
@@ -140,9 +258,39 @@ ApplicationWindow {
                                     item.tableName = itemTable
                                     item.loadData()
                                 }
+                                if (item && itemType === "connection_form") {
+                                    if (model.connectionId !== -1) {
+                                        // Find connection data
+                                        for (var i = 0; i < App.connections.length; i++) {
+                                            if (App.connections[i].id === model.connectionId) {
+                                                item.load(App.connections[i])
+                                                break
+                                            }
+                                        }
+                                    } else {
+                                        item.resetFields()
+                                    }
+                                }
+                                if (item && itemType === "sql") {
+                                    item.setQueryText(itemSqlText)
+                                }
+                            }
+                            
+                            onItemSqlTextChanged: {
+                                if (item && itemType === "sql") {
+                                    item.setQueryText(itemSqlText)
+                                }
                             }
                             
                             onItemTypeChanged: console.log("Loader type changed:", index, itemType)
+                            
+                            Connections {
+                                target: itemType === "sql" ? item : null
+                                function onQueryTextEdited(text) {
+                                    tabModel.setProperty(index, "sqlText", text)
+                                    saveState()
+                                }
+                            }
                         }
                     }
                 }
@@ -150,6 +298,34 @@ ApplicationWindow {
         }
     }
     
+    Component {
+        id: connectionFormComponent
+        ConnectionForm {
+            onSaved: (id) => {
+                // Close tab after save? Or just update title?
+                // Let's close it for now as it's the standard behavior for dialogs
+                // Find the tab index
+                for (var i = 0; i < tabModel.count; i++) {
+                    // Check if this form instance corresponds to this tab
+                    // Since Loader recreates item, we can't easily check 'this' against loaded item
+                    // But we know current index
+                    if (appTabs.currentIndex === i) {
+                        tabModel.remove(i)
+                        break
+                    }
+                }
+            }
+            onCanceled: {
+                for (var i = 0; i < tabModel.count; i++) {
+                    if (appTabs.currentIndex === i) {
+                        tabModel.remove(i)
+                        break
+                    }
+                }
+            }
+        }
+    }
+
     Component {
         id: sqlComponent
         SqlConsole {

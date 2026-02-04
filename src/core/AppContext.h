@@ -8,6 +8,9 @@
 #include "ISecretsService.h"
 #include "AddonHost.h"
 #include <QVariantList>
+#include <QVariantMap>
+#include <QStringList>
+#include <QString>
 #include <QThread>
 #include "QueryWorker.h"
 
@@ -62,6 +65,10 @@ public:
     Q_INVOKABLE QVariantList getViews(const QString& schema, const QString& table);
     Q_INVOKABLE int saveView(const QVariantMap& viewData);
     Q_INVOKABLE bool deleteView(int id);
+
+    // App State API
+    Q_INVOKABLE void saveAppState(const QVariantMap& state);
+    Q_INVOKABLE QVariantMap loadAppState();
 
 signals:
     void connectionsChanged();
