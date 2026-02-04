@@ -19,7 +19,7 @@ public:
     Q_INVOKABLE void loadFromVariant(const QVariantMap& data);
     void setSchema(const Sofa::Core::TableSchema& schema);
     void setData(const std::vector<std::vector<QVariant>>& rows);
-    void clear();
+    Q_INVOKABLE void clear();
     
     // Accessors
     int rowCount() const;

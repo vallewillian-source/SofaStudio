@@ -1,5 +1,6 @@
 #include "AppContext.h"
 #include <QVariantMap>
+#include <QStringList>
 #include "addons/IAddon.h"
 #include "udm/UDM.h"
 
@@ -324,7 +325,13 @@ QVariantList AppContext::getQueryHistory(int connectionId)
 QVariantMap AppContext::getDataset(const QString& schema, const QString& table, int limit, int offset)
 {
     QVariantMap result;
-    if (!m_currentConnection || !m_currentConnection->isOpen()) return result;
+    if (!m_currentConnection || !m_currentConnection->isOpen()) {
+        result["error"] = "Conexão não está aberta.";
+        if (m_logger) {
+            m_logger->error("\x1b[31m❌ Dataset\x1b[0m conexão não está aberta");
+        }
+        return result;
+    }
     
     QString sql = QString("SELECT * FROM \"%1\".\"%2\" LIMIT %3 OFFSET %4")
                       .arg(schema).arg(table).arg(limit).arg(offset);
@@ -338,6 +345,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
     
     auto queryProvider = m_currentConnection->query();
     if (!queryProvider) {
+        result["error"] = "Query provider indisponível.";
         if (m_logger) {
             m_logger->error("\x1b[31m❌ Dataset\x1b[0m query provider indisponível");
         }
@@ -348,6 +356,9 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
     if (m_logger && !page.warning.isEmpty()) {
         m_logger->warning("\x1b[33m⚠️ Dataset\x1b[0m " + page.warning);
     }
+    if (!page.warning.isEmpty()) {
+        result["error"] = page.warning;
+    }
     
     QVariantList columns;
     for (const auto& col : page.columns) {
@@ -357,6 +368,12 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         columns.append(c);
     }
     result["columns"] = columns;
+    if (page.columns.empty() && !result.contains("error")) {
+        result["error"] = "Falha ao carregar colunas da tabela.";
+        if (m_logger) {
+            m_logger->error("\x1b[31m❌ Dataset\x1b[0m colunas vazias para " + schema + "." + table);
+        }
+    }
     
     QVariantList rows;
     for (const auto& row : page.rows) {
@@ -364,12 +381,29 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         for (const auto& val : row) {
             r.append(val);
         }
-        rows.append(r);
+        rows.append(QVariant(r));
     }
     result["rows"] = rows;
     
     if (m_logger) {
+        m_logger->info("\x1b[35m🧪 Dataset rows payload\x1b[0m total=" + QString::number(rows.size()) +
+                       " firstRowSize=" + (rows.isEmpty() ? QString("0") : QString::number(rows.first().toList().size())));
+        if (!rows.isEmpty()) {
+            QStringList debugVals;
+            for (const auto& v : rows.first().toList()) debugVals << v.toString();
+            m_logger->info("\x1b[35m🧪 Dataset first row values\x1b[0m " + debugVals.join("|"));
+        }
+    }
+    
+    if (m_logger) {
         m_logger->info("\x1b[32m✅ Dataset\x1b[0m colunas=" + QString::number(page.columns.size()) + " linhas=" + QString::number(page.rows.size()) + " hasMore=" + (page.hasMore ? "true" : "false"));
+    }
+    if (m_logger && !rows.isEmpty()) {
+        QStringList debugVals;
+        for (const auto& v : rows.first().toList()) {
+            debugVals << (QString(v.typeName()) + ":" + v.toString());
+        }
+        m_logger->info("\x1b[35m🧪 Dataset first row typed\x1b[0m " + debugVals.join("|"));
     }
     
     return result;

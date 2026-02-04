@@ -13,7 +13,12 @@ ApplicationWindow {
     
     ListModel {
         id: tabModel
-        ListElement { title: "Home"; type: "home" }
+        ListElement { 
+            title: "Home"
+            type: "home"
+            schema: ""
+            tableName: ""
+        }
     }
     
     function openTable(schema, tableName) {
@@ -74,6 +79,7 @@ ApplicationWindow {
                 currentIndex: appTabs.currentIndex
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                onCurrentIndexChanged: console.log("\u001b[35m🥞 StackLayout\u001b[0m", "index=" + currentIndex)
                 
                 Repeater {
                     model: tabModel
@@ -82,18 +88,22 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         
-                        sourceComponent: type === "home" ? homeComponent : (type === "table" ? tableComponent : sqlComponent)
-                        property string schema: model.schema || "public"
-                        property string tableName: model.tableName || ""
-                        property string type: model.type || "home"
+                        property string itemType: model.type || "home"
+                        property string itemSchema: model.schema || "public"
+                        property string itemTable: model.tableName || ""
+                        
+                        sourceComponent: itemType === "home" ? homeComponent : (itemType === "table" ? tableComponent : sqlComponent)
+                        
                         onLoaded: {
-                            console.log("\u001b[36m🧭 Loader\u001b[0m", "type=" + type, "schema=" + schema, "table=" + tableName)
-                            if (item && type === "table") {
-                                item.schema = schema
-                                item.tableName = tableName
+                            console.log("\u001b[36m🧭 Loader\u001b[0m", "index=" + index, "type=" + itemType, "schema=" + itemSchema, "table=" + itemTable)
+                            if (item && itemType === "table") {
+                                item.schema = itemSchema
+                                item.tableName = itemTable
                                 item.loadData()
                             }
                         }
+                        
+                        onItemTypeChanged: console.log("Loader type changed:", index, itemType)
                     }
                 }
             }
@@ -137,6 +147,7 @@ ApplicationWindow {
             id: tableRoot
             property string schema: "public"
             property string tableName: ""
+            property string errorMessage: ""
             color: Theme.background
             
             DataGridEngine {
@@ -148,15 +159,38 @@ ApplicationWindow {
                 engine: gridEngine
             }
 
+            Text {
+                visible: tableRoot.errorMessage.length > 0
+                text: tableRoot.errorMessage
+                color: Theme.error
+                font.pixelSize: 14
+                anchors.centerIn: parent
+            }
+
             function loadData() {
+                tableRoot.errorMessage = ""
                 if (tableName) {
                     console.log("\u001b[34m📥 Buscando dados\u001b[0m", schema + "." + tableName)
                     var data = App.getDataset(schema, tableName, 100, 0)
                     console.log("\u001b[32m✅ Dataset recebido\u001b[0m", "colunas=" + (data.columns ? data.columns.length : 0) + " linhas=" + (data.rows ? data.rows.length : 0))
+                    if (data.rows && data.rows.length > 0) {
+                        console.log("\u001b[35m🧪 Dataset primeira linha\u001b[0m", JSON.stringify(data.rows[0]))
+                    }
+                    if (data.error) {
+                        console.error("\u001b[31m❌ Dataset\u001b[0m", data.error)
+                        tableRoot.errorMessage = data.error
+                        gridEngine.clear()
+                        return
+                    }
+                    if (!data.columns || data.columns.length === 0) {
+                        tableRoot.errorMessage = "Falha ao carregar dados da tabela."
+                        gridEngine.clear()
+                        return
+                    }
                     gridEngine.loadFromVariant(data)
                 } else {
-                    console.log("\u001b[33m⚠️ Sem tabela, usando mock\u001b[0m")
-                    gridEngine.loadMockData()
+                    tableRoot.errorMessage = "Tabela inválida."
+                    gridEngine.clear()
                 }
             }
         }
