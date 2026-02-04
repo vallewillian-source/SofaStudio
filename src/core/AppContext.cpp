@@ -7,12 +7,14 @@ AppContext::AppContext(std::shared_ptr<ICommandService> commandService,
                        std::shared_ptr<ILogger> logger,
                        std::shared_ptr<ILocalStoreService> localStore,
                        std::shared_ptr<ISecretsService> secrets,
+                       std::shared_ptr<AddonHost> addonHost,
                        QObject* parent)
     : QObject(parent)
     , m_commandService(std::move(commandService))
     , m_logger(std::move(logger))
     , m_localStore(std::move(localStore))
     , m_secrets(std::move(secrets))
+    , m_addonHost(std::move(addonHost))
 {
     if (m_localStore) {
         m_localStore->init();
@@ -90,6 +92,61 @@ bool AppContext::deleteConnection(int id)
 void AppContext::refreshConnections()
 {
     emit connectionsChanged();
+}
+
+QVariantList AppContext::availableDrivers() const
+{
+    QVariantList list;
+    // For MVP, we only have Postgres. 
+    // In future, AddonHost should expose a method to list all registered addons.
+    // Since AddonHost only has getAddon/hasAddon/registerAddon, we can't iterate easily 
+    // unless we modify AddonHost or just hardcode for now if we know what we registered.
+    // Wait, AddonHost has a map. But no method to list keys.
+    // I should probably add a method to AddonHost to list registered addons.
+    // For now, I will just return the "postgres" one if it exists.
+    
+    if (m_addonHost && m_addonHost->hasAddon("postgres")) {
+        auto addon = m_addonHost->getAddon("postgres");
+        QVariantMap map;
+        map["id"] = addon->id();
+        map["name"] = addon->name();
+        list.append(map);
+    }
+    
+    return list;
+}
+
+bool AppContext::testConnection(const QVariantMap& data)
+{
+    if (!m_addonHost) return false;
+    
+    // Determine driver from data or default to postgres for now
+    // Ideally data should contain "driver" or "type"
+    QString driverId = "postgres"; // Default for MVP
+    
+    if (!m_addonHost->hasAddon(driverId)) {
+        m_logger->error("Driver not found: " + driverId);
+        return false;
+    }
+    
+    auto addon = m_addonHost->getAddon(driverId);
+    auto connection = addon->createConnection();
+    
+    QString host = data.value("host").toString();
+    int port = data.value("port", 5432).toInt();
+    QString db = data.value("database").toString();
+    QString user = data.value("user").toString();
+    QString password = data.value("password").toString();
+    
+    bool success = connection->testConnection(host, port, db, user, password);
+    
+    if (success) {
+        m_logger->info("Connection test successful for " + host);
+    } else {
+        m_logger->error("Connection test failed: " + connection->lastError());
+    }
+    
+    return success;
 }
 
 }

@@ -53,6 +53,16 @@ Dialog {
         width: 400
         spacing: Theme.spacingMedium
         
+        // Driver
+        Label { text: "Driver" }
+        ComboBox {
+            id: driverCombo
+            Layout.fillWidth: true
+            textRole: "name"
+            valueRole: "id"
+            model: App.availableDrivers
+        }
+
         // Name
         Label { text: "Name" }
         TextField {
@@ -117,6 +127,38 @@ Dialog {
                     Layout.fillWidth: true
                     echoMode: TextInput.Password
                     placeholderText: "Optional"
+                }
+            }
+        }
+        
+        // Test Connection
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.spacingMedium
+            
+            Label {
+                id: testStatus
+                Layout.fillWidth: true
+                font.pixelSize: 12
+            }
+            
+            Button {
+                text: "Test Connection"
+                onClicked: {
+                    var data = {
+                        "host": hostField.text,
+                        "port": parseInt(portField.text),
+                        "database": dbField.text,
+                        "user": userField.text,
+                        "password": passField.text
+                    }
+                    if (App.testConnection(data)) {
+                        testStatus.text = "Connection Successful!"
+                        testStatus.color = "green"
+                    } else {
+                        testStatus.text = "Connection Failed!"
+                        testStatus.color = "red"
+                    }
                 }
             }
         }

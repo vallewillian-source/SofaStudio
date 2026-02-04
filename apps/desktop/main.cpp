@@ -11,9 +11,12 @@
 #include "AppContext.h"
 #include "LocalStoreService.h"
 #include "SecretsServiceStub.h"
+#include "AddonHost.h"
+#include "SofaAddonPostgres.h"
 
 using namespace Qt::StringLiterals;
 using namespace Sofa::Core;
+using namespace Sofa::Addons::Postgres;
 
 int main(int argc, char *argv[])
 {
@@ -25,13 +28,17 @@ int main(int argc, char *argv[])
     auto commandService = std::make_shared<CommandService>(logger);
     auto localStore = std::make_shared<LocalStoreService>(logger);
     auto secrets = std::make_shared<SecretsServiceStub>();
+    auto addonHost = std::make_shared<AddonHost>(logger);
+
+    // Register Addons
+    addonHost->registerAddon("postgres", std::make_shared<PostgresAddon>());
 
     // Register a test command
     commandService->registerCommand("test.hello", "Hello Command", [logger]() {
         logger->info("Hello from Command System!");
     });
 
-    auto appContext = std::make_shared<AppContext>(commandService, logger, localStore, secrets);
+    auto appContext = std::make_shared<AppContext>(commandService, logger, localStore, secrets, addonHost);
 
     QQmlApplicationEngine engine;
 

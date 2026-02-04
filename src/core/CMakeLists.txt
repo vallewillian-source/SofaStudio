@@ -18,6 +18,10 @@ qt_add_library(SofaCore STATIC
     LocalStoreService.cpp
     ISecretsService.h
     SecretsServiceStub.h
+    udm/UDM.h
+    addons/IAddon.h
+    AddonHost.h
+    AddonHost.cpp
 )
 
 target_link_libraries(SofaCore PUBLIC Qt6::Core Qt6::Sql)
