@@ -102,6 +102,15 @@ ApplicationWindow {
                     id: appTabs
                     Layout.fillWidth: true
                     tabsModel: tabModel
+                    onRequestCloseTab: (index) => {
+                        console.log("Closing tab:", index)
+                        if (index > 0 && index < tabModel.count) {
+                            tabModel.remove(index)
+                            // If we closed the active tab, or a tab before it, we need to adjust index
+                            // TabBar usually handles index adjustment automatically when model changes,
+                            // but let's ensure we land on a safe tab (e.g. last one) if current becomes invalid
+                        }
+                    }
                 }
                 
                 // Content Area
