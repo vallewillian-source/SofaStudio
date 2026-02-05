@@ -10,11 +10,23 @@ QtObject {
     property color textPrimary: "#E0E0E0"
     property color textSecondary: "#909090"
     property color accent: "#FFA507"
-    property color accentHover: "#FFB833"
+    property color accentHover: "#FEB83B"
     property color accentSecondary: "#FEB83B"
     property color accentDark1: "#13132B"
     property color accentDark2: "#262645"
     property color error: "#F48771"
+    readonly property var connectionAvatarColors: [
+        "#FFA507", // Sofa Orange (Institutional)
+        "#01D4FE", // Electric Blue
+        "#FF5F5F", // Soft Red
+        "#4CAF50", // Success Green
+        "#A855F7", // Modern Purple
+        "#EC4899", // Vibrant Pink
+        "#3B82F6", // Royal Blue
+        "#14B8A6", // Teal
+        "#F59E0B", // Amber
+        "#6366F1"  // Indigo
+    ]
 
     // Spacing
     property int spacingSmall: 4

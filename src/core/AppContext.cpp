@@ -75,6 +75,7 @@ QVariantList AppContext::connections() const
         map["port"] = conn.port;
         map["database"] = conn.database;
         map["user"] = conn.user;
+        map["color"] = conn.color;
         map["createdAt"] = conn.createdAt;
         map["updatedAt"] = conn.updatedAt;
         list.append(map);
@@ -93,6 +94,7 @@ bool AppContext::saveConnection(const QVariantMap& data)
     conn.port = data.value("port", 5432).toInt();
     conn.database = data.value("database").toString();
     conn.user = data.value("user").toString();
+    conn.color = data.value("color").toString();
     
     // Handle secret if present (simple pass-through for now)
     QString password = data.value("password").toString();

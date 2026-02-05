@@ -26,22 +26,12 @@ Popup {
     }
 
     // Avatar Colors
-    readonly property var avatarColors: [
-        Theme.accent,
-        Theme.accentSecondary,
-        Theme.accentDark1,
-        Theme.accentDark2,
-        Qt.lighter(Theme.accent, 1.15),
-        Qt.darker(Theme.accent, 1.15),
-        Qt.lighter(Theme.accentSecondary, 1.2),
-        Qt.darker(Theme.accentSecondary, 1.1),
-        Qt.lighter(Theme.accentDark2, 1.25),
-        Qt.darker(Theme.accentDark1, 1.1)
-    ]
+    readonly property var avatarColors: Theme.connectionAvatarColors
     readonly property int avatarSize: 32
     readonly property int avatarRadius: Math.round(avatarSize * 0.28)
 
-    function getAvatarColor(name) {
+    function getAvatarColor(name, colorValue) {
+        if (colorValue && colorValue.length > 0) return colorValue
         if (!name) return avatarColors[0]
         var hash = 0
         for (var i = 0; i < name.length; i++) {
@@ -103,7 +93,8 @@ Popup {
             "name": "Connect a new database",
             "type": "action",
             "dbType": "",
-            "icon": "+"
+            "icon": "+",
+            "color": ""
         })
 
         // 2. Connections
@@ -117,7 +108,8 @@ Popup {
                 "name": item.name,
                 "type": "connection",
                 "dbType": "PostgreSQL", // Fixed for now as requested
-                "icon": ""
+                "icon": "",
+                "color": item.color
             })
         }
         
@@ -128,7 +120,8 @@ Popup {
                 "name": "Close Connection",
                 "type": "action",
                 "dbType": "",
-                "icon": "×"
+                "icon": "×",
+                "color": ""
             })
         }
     }
@@ -225,14 +218,14 @@ Popup {
                         Layout.preferredWidth: root.avatarSize
                         Layout.preferredHeight: root.avatarSize
                         radius: root.avatarRadius
-                        color: model.type === "action" ? Theme.surfaceHighlight : root.getAvatarColor(model.name)
+                        color: model.type === "action" ? Theme.surfaceHighlight : root.getAvatarColor(model.name, model.color)
                         border.color: Theme.border
                         border.width: model.type === "action" ? 1 : 0
                         
                         Text {
                             anchors.centerIn: parent
                             text: model.type === "action" ? model.icon : (model.name ? model.name.charAt(0).toUpperCase() : "?")
-                            color: model.type === "action" ? Theme.textPrimary : root.getAvatarTextColor(root.getAvatarColor(model.name))
+                            color: model.type === "action" ? Theme.textPrimary : root.getAvatarTextColor(root.getAvatarColor(model.name, model.color))
                             font.bold: true
                             font.pixelSize: 16
                         }

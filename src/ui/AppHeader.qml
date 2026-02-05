@@ -74,6 +74,20 @@ Rectangle {
         }
         return "Unknown"
     }
+    property string activeConnectionColor: {
+        var currentId = App.activeConnectionId
+        if (currentId === -1) {
+            return ""
+        }
+        
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            if (conns[i].id === currentId) {
+                return conns[i].color || ""
+            }
+        }
+        return ""
+    }
 
     ConnectionSelectorModal {
         id: connectionModal
@@ -245,14 +259,14 @@ Rectangle {
                 Rectangle {
                     Layout.preferredWidth: 18
                     Layout.preferredHeight: 18
-                    radius: 9
-                    color: App.activeConnectionId !== -1 ? connectionModal.getAvatarColor(activeConnectionName) : "transparent"
+                    radius: Math.round(width * 0.28)
+                    color: App.activeConnectionId !== -1 ? connectionModal.getAvatarColor(activeConnectionName, activeConnectionColor) : "transparent"
                     visible: App.activeConnectionId !== -1
                     
                     Text {
                         anchors.centerIn: parent
                         text: activeConnectionName.length > 0 ? activeConnectionName.charAt(0).toUpperCase() : ""
-                        color: connectionModal.getAvatarTextColor(connectionModal.getAvatarColor(activeConnectionName))
+                        color: connectionModal.getAvatarTextColor(connectionModal.getAvatarColor(activeConnectionName, activeConnectionColor))
                         font.pixelSize: 10
                         font.bold: true
                     }

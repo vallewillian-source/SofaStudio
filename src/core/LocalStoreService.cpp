@@ -66,6 +66,23 @@ void LocalStoreService::init()
         m_logger->info("LocalStore initialized successfully");
     }
 
+    bool hasColorColumn = false;
+    QSqlQuery columnQuery(db);
+    if (columnQuery.exec("PRAGMA table_info(connections)")) {
+        while (columnQuery.next()) {
+            if (columnQuery.value(1).toString() == "color") {
+                hasColorColumn = true;
+                break;
+            }
+        }
+    }
+    if (!hasColorColumn) {
+        QSqlQuery alterQuery(db);
+        if (!alterQuery.exec("ALTER TABLE connections ADD COLUMN color TEXT DEFAULT '#FFA507'")) {
+            m_logger->error("Failed to add color column to connections table: " + alterQuery.lastError().text());
+        }
+    }
+
     QString createHistoryTable = R"(
         CREATE TABLE IF NOT EXISTS query_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,7 +167,7 @@ std::vector<ConnectionData> LocalStoreService::getAllConnections()
     if (!db.open()) return results;
 
     QSqlQuery query(db);
-    if (query.exec("SELECT id, name, host, port, database, user, secret_ref, created_at, updated_at FROM connections ORDER BY name ASC")) {
+    if (query.exec("SELECT id, name, host, port, database, user, color, secret_ref, created_at, updated_at FROM connections ORDER BY name ASC")) {
         while (query.next()) {
             ConnectionData data;
             data.id = query.value(0).toInt();
@@ -159,9 +176,10 @@ std::vector<ConnectionData> LocalStoreService::getAllConnections()
             data.port = query.value(3).toInt();
             data.database = query.value(4).toString();
             data.user = query.value(5).toString();
-            data.secretRef = query.value(6).toString();
-            data.createdAt = query.value(7).toDateTime();
-            data.updatedAt = query.value(8).toDateTime();
+            data.color = query.value(6).toString();
+            data.secretRef = query.value(7).toString();
+            data.createdAt = query.value(8).toDateTime();
+            data.updatedAt = query.value(9).toDateTime();
             results.push_back(data);
         }
     } else {
@@ -175,24 +193,31 @@ int LocalStoreService::saveConnection(const ConnectionData& data)
     auto db = getDatabase();
     if (!db.open()) return -1;
     
+    QString color = data.color;
+    if (color.isEmpty()) {
+        color = "#FFA507";
+    }
+
     QSqlQuery query(db);
     if (data.id == -1) {
-        query.prepare("INSERT INTO connections (name, host, port, database, user, secret_ref, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        query.prepare("INSERT INTO connections (name, host, port, database, user, color, secret_ref, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         query.addBindValue(data.name);
         query.addBindValue(data.host);
         query.addBindValue(data.port);
         query.addBindValue(data.database);
         query.addBindValue(data.user);
+        query.addBindValue(color);
         query.addBindValue(data.secretRef);
         query.addBindValue(QDateTime::currentDateTime());
         query.addBindValue(QDateTime::currentDateTime());
     } else {
-        query.prepare("UPDATE connections SET name=?, host=?, port=?, database=?, user=?, secret_ref=?, updated_at=? WHERE id=?");
+        query.prepare("UPDATE connections SET name=?, host=?, port=?, database=?, user=?, color=?, secret_ref=?, updated_at=? WHERE id=?");
         query.addBindValue(data.name);
         query.addBindValue(data.host);
         query.addBindValue(data.port);
         query.addBindValue(data.database);
         query.addBindValue(data.user);
+        query.addBindValue(color);
         query.addBindValue(data.secretRef);
         query.addBindValue(QDateTime::currentDateTime());
         query.addBindValue(data.id);

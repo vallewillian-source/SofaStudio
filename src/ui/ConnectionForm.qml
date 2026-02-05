@@ -7,10 +7,49 @@ Rectangle {
     color: "transparent"
     
     property int connectionId: -1
+    property var colorOptions: Theme.connectionAvatarColors
+    property string selectedColor: Theme.connectionAvatarColors[0]
     signal saved(int id)
     signal canceled()
     
-    // Reset fields
+    function colorToRgb(colorValue) {
+        if (typeof colorValue === "string") {
+            var hex = colorValue.replace("#", "")
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+            }
+            if (hex.length !== 6) return { "r": 0, "g": 0, "b": 0 }
+            return {
+                "r": parseInt(hex.slice(0, 2), 16) / 255,
+                "g": parseInt(hex.slice(2, 4), 16) / 255,
+                "b": parseInt(hex.slice(4, 6), 16) / 255
+            }
+        }
+        if (colorValue && colorValue.r !== undefined) {
+            return { "r": colorValue.r, "g": colorValue.g, "b": colorValue.b }
+        }
+        return { "r": 0, "g": 0, "b": 0 }
+    }
+
+    function relativeLuminance(colorValue) {
+        var rgb = colorToRgb(colorValue)
+        var toLinear = function(value) {
+            return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4)
+        }
+        var r = toLinear(rgb.r)
+        var g = toLinear(rgb.g)
+        var b = toLinear(rgb.b)
+        return (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+    }
+
+    function isColorDark(colorValue) {
+        return relativeLuminance(colorValue) < 0.5
+    }
+
+    function getSelectionTextColor(colorValue) {
+        return isColorDark(colorValue) ? "#FFFFFF" : Theme.background
+    }
+
     function resetFields() {
         connectionId = -1
         nameField.text = ""
@@ -20,6 +59,7 @@ Rectangle {
         userField.text = "postgres"
         passField.text = ""
         testStatus.text = ""
+        selectedColor = colorOptions[0]
     }
 
     function load(conn) {
@@ -31,6 +71,7 @@ Rectangle {
         userField.text = conn.user
         passField.text = "" // Password is not retrieved back
         testStatus.text = ""
+        selectedColor = conn.color && conn.color.length > 0 ? conn.color : colorOptions[0]
     }
     
     function save() {
@@ -41,7 +82,8 @@ Rectangle {
             "port": parseInt(portField.text),
             "database": dbField.text,
             "user": userField.text,
-            "password": passField.text
+            "password": passField.text,
+            "color": selectedColor
         }
         
         if (App.saveConnection(data)) {
@@ -86,6 +128,38 @@ Rectangle {
                 id: nameField
                 Layout.fillWidth: true
                 placeholderText: "My Local DB"
+            }
+
+            Label { text: "Color"; color: Theme.textPrimary }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: colorOptions
+                    delegate: Rectangle {
+                        width: 26
+                        height: 26
+                        radius: Math.round(width * 0.28)
+                        color: modelData
+                        border.width: selectedColor === modelData ? 2 : 1
+                        border.color: selectedColor === modelData ? Theme.textPrimary : Theme.border
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: selectedColor = modelData
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: selectedColor === modelData ? "✓" : ""
+                            color: getSelectionTextColor(modelData)
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+                    }
+                }
             }
             
             // Host & Port

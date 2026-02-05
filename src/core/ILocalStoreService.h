@@ -13,6 +13,7 @@ struct ConnectionData {
     int port = 5432;
     QString database;
     QString user;
+    QString color;
     QString secretRef;
     QDateTime createdAt;
     QDateTime updatedAt;
