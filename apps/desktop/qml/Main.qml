@@ -1,17 +1,21 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import sofa.ui
 import sofa.datagrid 1.0
 
 ApplicationWindow {
+    id: root
     width: 1024
     height: 768
     visible: true
     title: qsTr("Sofa Studio")
     color: Theme.background
+    flags: Qt.FramelessWindowHint | Qt.Window
     
     property bool isRestoring: false
+    property int resizeHandleSize: 6
 
     ListModel {
         id: tabModel
@@ -188,6 +192,7 @@ ApplicationWindow {
         AppHeader {
             Layout.fillWidth: true
             Layout.preferredHeight: 35
+            windowRef: root
             
             onRequestNewConnection: {
                 openConnectionTab(-1)
@@ -302,6 +307,98 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeHorCursor
+            onPressed: root.startSystemResize(Qt.LeftEdge)
+        }
+
+        MouseArea {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeHorCursor
+            onPressed: root.startSystemResize(Qt.RightEdge)
+        }
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeVerCursor
+            onPressed: root.startSystemResize(Qt.TopEdge)
+        }
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeVerCursor
+            onPressed: root.startSystemResize(Qt.BottomEdge)
+        }
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            width: resizeHandleSize
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: root.startSystemResize(Qt.TopEdge | Qt.LeftEdge)
+        }
+
+        MouseArea {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            width: resizeHandleSize
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: root.startSystemResize(Qt.TopEdge | Qt.RightEdge)
+        }
+
+        MouseArea {
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            width: resizeHandleSize
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: root.startSystemResize(Qt.BottomEdge | Qt.LeftEdge)
+        }
+
+        MouseArea {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width: resizeHandleSize
+            height: resizeHandleSize
+            hoverEnabled: true
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: root.startSystemResize(Qt.BottomEdge | Qt.RightEdge)
+        }
+    }
+
+    function toggleMaximize() {
+        if (root.visibility === Window.Maximized) {
+            root.showNormal()
+        } else {
+            root.showMaximized()
         }
     }
     

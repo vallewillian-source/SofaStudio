@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 
 Rectangle {
     id: root
@@ -8,6 +9,9 @@ Rectangle {
     color: Theme.surface
     border.color: Theme.border
     border.width: 1
+
+    property Window windowRef: null
+    property bool isMac: Qt.platform.os === "osx"
     
     signal requestNewConnection()
     signal requestEditConnection(var connectionId)
@@ -53,11 +57,145 @@ Rectangle {
         function onConnectionOpened(id) { syncModel() }
     }
 
+    MouseArea {
+        anchors.fill: parent
+        z: 0
+        onPressed: {
+            if (windowRef) {
+                windowRef.startSystemMove()
+            }
+        }
+        onDoubleClicked: {
+            if (windowRef && windowRef.toggleMaximize) {
+                windowRef.toggleMaximize()
+            }
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacingMedium
         anchors.rightMargin: Theme.spacingMedium
         spacing: Theme.spacingMedium
+        z: 1
+
+        RowLayout {
+            spacing: 6
+
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: "#FF5F57"
+                border.color: "#E0443E"
+                visible: isMac
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef) windowRef.close()
+                }
+            }
+
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: "#FFBD2E"
+                border.color: "#DEA123"
+                visible: isMac
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef) windowRef.showMinimized()
+                }
+            }
+
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: "#28C840"
+                border.color: "#1EAE33"
+                visible: isMac
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef && windowRef.toggleMaximize) windowRef.toggleMaximize()
+                }
+            }
+
+            Rectangle {
+                width: 28
+                height: 22
+                radius: 3
+                color: minMouseArea.containsMouse ? Theme.surfaceHighlight : "transparent"
+                visible: !isMac
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "—"
+                    color: Theme.textPrimary
+                    font.pixelSize: 12
+                }
+
+                MouseArea {
+                    id: minMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef) windowRef.showMinimized()
+                }
+            }
+
+            Rectangle {
+                width: 28
+                height: 22
+                radius: 3
+                color: maxMouseArea.containsMouse ? Theme.surfaceHighlight : "transparent"
+                visible: !isMac
+
+                Text {
+                    anchors.centerIn: parent
+                    text: windowRef && windowRef.visibility === Window.Maximized ? "❐" : "□"
+                    color: Theme.textPrimary
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    id: maxMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef && windowRef.toggleMaximize) windowRef.toggleMaximize()
+                }
+            }
+
+            Rectangle {
+                width: 28
+                height: 22
+                radius: 3
+                color: closeMouseArea.containsMouse ? Theme.surfaceHighlight : "transparent"
+                visible: !isMac
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "×"
+                    color: Theme.textPrimary
+                    font.pixelSize: 14
+                }
+
+                MouseArea {
+                    id: closeMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (windowRef) windowRef.close()
+                }
+            }
+        }
         
         Text {
             text: "Sofa Studio"
