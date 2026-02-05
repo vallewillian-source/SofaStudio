@@ -23,6 +23,7 @@ class PostgresCatalogProvider : public ICatalogProvider {
 public:
     explicit PostgresCatalogProvider(const QString& connectionName);
     std::vector<QString> listSchemas() override;
+    std::vector<QString> listHiddenSchemas() override;
     std::vector<QString> listTables(const QString& schema) override;
     TableSchema getTableSchema(const QString& schema, const QString& table) override;
 

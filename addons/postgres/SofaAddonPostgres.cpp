@@ -121,6 +121,10 @@ std::vector<QString> PostgresCatalogProvider::listSchemas() {
     return schemas;
 }
 
+std::vector<QString> PostgresCatalogProvider::listHiddenSchemas() {
+    return { "information_schema", "pg_catalog", "pg_toast" };
+}
+
 std::vector<QString> PostgresCatalogProvider::listTables(const QString& schema) {
     std::vector<QString> tables;
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);

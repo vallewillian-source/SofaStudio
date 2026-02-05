@@ -2,6 +2,7 @@
 #include <QVariantMap>
 #include <QStringList>
 #include <QJsonDocument>
+#include <QSet>
 #include "addons/IAddon.h"
 #include "udm/UDM.h"
 
@@ -290,7 +291,29 @@ QStringList AppContext::getSchemas()
     
     auto catalog = m_currentConnection->catalog();
     if (catalog) {
+        QSet<QString> hiddenSet;
+        auto hiddenSchemas = catalog->listHiddenSchemas();
+        for (const auto& s : hiddenSchemas) {
+            hiddenSet.insert(s);
+        }
         auto schemas = catalog->listSchemas();
+        for (const auto& s : schemas) {
+            if (!hiddenSet.contains(s)) {
+                list.append(s);
+            }
+        }
+    }
+    return list;
+}
+
+QStringList AppContext::getHiddenSchemas()
+{
+    QStringList list;
+    if (!m_currentConnection || !m_currentConnection->isOpen()) return list;
+    
+    auto catalog = m_currentConnection->catalog();
+    if (catalog) {
+        auto schemas = catalog->listHiddenSchemas();
         for (const auto& s : schemas) {
             list.append(s);
         }

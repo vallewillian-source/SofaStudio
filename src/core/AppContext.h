@@ -51,6 +51,7 @@ public:
     Q_INVOKABLE bool openConnection(int id);
     Q_INVOKABLE void closeConnection();
     Q_INVOKABLE QStringList getSchemas();
+    Q_INVOKABLE QStringList getHiddenSchemas();
     Q_INVOKABLE QStringList getTables(const QString& schema);
     
     // Query API
