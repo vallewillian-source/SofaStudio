@@ -201,7 +201,7 @@ Rectangle {
         // New Query Button (+)
         Controls.Button {
             id: newTabBtn
-            Layout.preferredWidth: 40
+            Layout.preferredWidth: 38
             Layout.fillHeight: true
             flat: true
             visible: App.activeConnectionId !== -1
@@ -209,13 +209,19 @@ Rectangle {
             contentItem: Text {
                 text: "+"
                 font.pixelSize: 20
-                color: newTabBtn.hovered ? Theme.textPrimary : Theme.textSecondary
+                color: newTabBtn.hovered ? "#FFFFFF" : Theme.textSecondary
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
             
-            background: Rectangle {
-                color: newTabBtn.down ? Theme.surfaceHighlight : (newTabBtn.hovered ? Qt.lighter(Theme.surfaceHighlight, 1.2) : "transparent")
+            background: Item {
+                Rectangle {
+                    width: 28
+                    height: 28
+                    radius: 6
+                    anchors.centerIn: parent
+                    color: newTabBtn.down ? Theme.surfaceHighlight : (newTabBtn.hovered ? Theme.surfaceHighlight : "transparent")
+                }
             }
             
             onClicked: control.newQueryClicked()
