@@ -14,7 +14,7 @@ The goal is to build a tool that feels **instant** and looks **beautiful** witho
 *   **"Beauty Mode"**: Transform raw database tables into readable, analyzable views with aliases and formatting.
 *   **Extensible Architecture**: A thin core with database drivers implemented as add-ons.
 
-## ✨ Features (MVP)
+## ✨ Current Features
 
 *   **🔌 PostgreSQL Support**: First-class support via the modular Add-on system.
 *   **⚡ Universal DataGrid**: A high-performance, C++ powered grid engine capable of handling large datasets with smooth virtualization.
