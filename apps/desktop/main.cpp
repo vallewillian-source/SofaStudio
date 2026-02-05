@@ -4,6 +4,7 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QString>
+#include <QIcon>
 #include <memory>
 
 #include "ConsoleLogger.h"
@@ -24,6 +25,7 @@ int main(int argc, char *argv[])
 {
     QQuickStyle::setStyle("Basic");
     QGuiApplication app(argc, argv);
+    app.setWindowIcon(QIcon(u":/qt/qml/sofa/ui/assets/logo.svg"_s));
 
     // Bootstrap Services
     auto logger = std::make_shared<ConsoleLogger>();
