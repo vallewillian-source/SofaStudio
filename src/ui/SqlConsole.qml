@@ -53,7 +53,7 @@ Item {
                         
                         AppButton {
                             text: "Run"
-                            highlighted: true
+                            isPrimary: true
                             onClicked: runQuery()
                         }
 
@@ -136,7 +136,6 @@ Item {
                     DataGrid {
                         anchors.fill: parent
                         engine: gridEngine
-                        controlsVisible: root.gridControlsVisible
                     }
 
                     Rectangle {

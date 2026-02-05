@@ -198,15 +198,26 @@ Rectangle {
 
                     background: Rectangle {
                         implicitHeight: Theme.tabBarHeight
-                        color: parent.checked ? Theme.background : "transparent"
+                        color: tabBtn.checked ? Theme.background : "transparent"
                         
-                        // Top highlight line for active tab
+                        // Active Tab Indicator (Top Line)
                         Rectangle {
                             width: parent.width
                             height: 2
                             color: tabAccentColor
                             anchors.top: parent.top
-                            visible: parent.parent.checked
+                            visible: tabBtn.checked
+                        }
+                        
+                        // Right separator for all tabs
+                        Rectangle {
+                            width: 1
+                            height: parent.height - 12
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.border
+                            opacity: 0.5
+                            visible: !tabBtn.checked // Hide separator on active tab? Or keep it.
                         }
                     }
                 }
@@ -250,9 +261,26 @@ Rectangle {
             
             onClicked: control.newQueryClicked()
             
-            Controls.ToolTip.visible: hovered
-            Controls.ToolTip.text: "New SQL Console"
-            Controls.ToolTip.delay: 500
+            Controls.ToolTip {
+                id: btnToolTip
+                visible: newTabBtn.hovered
+                text: "New SQL Console"
+                delay: 500
+                timeout: 5000
+                
+                contentItem: Text {
+                    text: btnToolTip.text
+                    font.pixelSize: 12
+                    color: Theme.textPrimary
+                }
+                
+                background: Rectangle {
+                    color: Theme.surfaceHighlight
+                    border.color: Theme.border
+                    border.width: 1
+                    radius: 4
+                }
+            }
         }
 
         // Spacer to push everything to the left

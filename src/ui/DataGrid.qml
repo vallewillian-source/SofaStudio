@@ -10,49 +10,10 @@ Rectangle {
     
     // Public API
     property alias engine: view.engine
-    property bool controlsVisible: true
     
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-        
-        // Toolbar
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: root.controlsVisible ? 40 : 0
-            color: Theme.surface
-            border.color: Theme.border
-            border.width: 1
-            visible: root.controlsVisible
-            
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.spacingMedium
-                anchors.rightMargin: Theme.spacingMedium
-                spacing: Theme.spacingMedium
-                
-                AppButton {
-                    text: "Refresh"
-                    onClicked: {
-                        // TODO: trigger refresh
-                        console.log("Refresh clicked")
-                    }
-                }
-                
-                CheckBox {
-                    text: "Wrap Text"
-                    checked: false
-                    // TODO: bind to engine/view property
-                }
-                
-                Item { Layout.fillWidth: true } // Spacer
-                
-                Label {
-                    text: "Rows: " + (view.engine ? view.engine.rowCount : 0)
-                    color: Theme.textSecondary
-                }
-            }
-        }
         
         // Grid Area
         Rectangle {
@@ -125,6 +86,31 @@ Rectangle {
                             hScroll.position = view.contentX / view.totalWidth
                     }
                 }
+            }
+        }
+        
+        // Footer / Status Bar
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 24
+            color: Theme.surface
+            border.color: Theme.border
+            border.width: 1
+            visible: true
+            
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.spacingMedium
+                anchors.rightMargin: Theme.spacingMedium
+                spacing: Theme.spacingMedium
+                
+                Label {
+                    text: "Rows: " + (view.engine ? view.engine.rowCount : 0)
+                    color: Theme.textSecondary
+                    font.pixelSize: 11
+                }
+                
+                Item { Layout.fillWidth: true }
             }
         }
     }

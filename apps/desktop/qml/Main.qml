@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import Qt5Compat.GraphicalEffects
 import sofa.ui
 import sofa.datagrid 1.0
 
@@ -503,7 +504,7 @@ ApplicationWindow {
             property var currentViewData: null
             property var rawColumns: [] // Store raw columns for ViewEditor
             
-            color: "transparent"
+            color: Theme.background
             
             DataGridEngine {
                 id: gridEngine
@@ -512,7 +513,7 @@ ApplicationWindow {
             // Toolbar
             Rectangle {
                 id: toolbar
-                height: 40
+                height: 48
                 width: parent.width
                 color: Theme.surface
                 border.color: Theme.border
@@ -521,15 +522,35 @@ ApplicationWindow {
                 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    spacing: 10
+                    anchors.leftMargin: Theme.spacingLarge
+                    anchors.rightMargin: Theme.spacingLarge
+                    spacing: Theme.spacingMedium
                     
-                    Label { text: "View:" }
+                    AppButton {
+                        text: ""
+                        icon.source: "qrc:/qt/qml/sofa/ui/assets/rotate-right-solid-full.svg"
+                        isPrimary: true
+                        tooltip: "Refresh Data"
+                        Layout.preferredHeight: 24
+                        Layout.preferredWidth: 24
+                        iconSize: 12
+                        onClicked: tableRoot.loadData()
+                    }
+
+                    Item { Layout.fillWidth: true }
+                    
+                    // View Selector
+                    Label { 
+                        text: "VIEW" 
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                        color: Theme.textSecondary
+                    }
                     
                     ComboBox {
                         id: viewSelector
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 200
+                        Layout.preferredHeight: 32
                         textRole: "name"
                         valueRole: "id"
                         model: ListModel { id: viewModel }
@@ -540,22 +561,18 @@ ApplicationWindow {
                         }
                     }
                     
+                    // Actions
                     AppButton {
                         text: "New View"
+                        icon.source: "qrc:/qt/qml/sofa/ui/assets/table-cells-large-solid-full.svg"
                         onClicked: viewEditor.openEditor(tableRoot.rawColumns, null)
                     }
                     
                     AppButton {
                         text: "Edit"
+                        icon.source: "qrc:/qt/qml/sofa/ui/assets/gear-solid-full.svg"
                         enabled: tableRoot.currentViewId !== -1
                         onClicked: viewEditor.openEditor(tableRoot.rawColumns, tableRoot.currentViewData)
-                    }
-                    
-                    Item { Layout.fillWidth: true }
-                    
-                    AppButton {
-                        text: "Refresh"
-                        onClicked: tableRoot.loadData()
                     }
                 }
             }
@@ -566,7 +583,7 @@ ApplicationWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 engine: gridEngine
-                controlsVisible: tableRoot.gridControlsVisible
+                visible: !tableRoot.loading && !tableRoot.empty && tableRoot.errorMessage.length === 0
             }
             
             ViewEditor {
@@ -587,18 +604,76 @@ ApplicationWindow {
                 }
             }
 
+            // Empty/Loading/Error State
             Rectangle {
                 anchors.fill: parent
-                color: "transparent"
+                anchors.topMargin: toolbar.height
+                color: Theme.background
                 visible: tableRoot.loading || tableRoot.empty || tableRoot.errorMessage.length > 0
-
-                Text {
+                z: 5
+                
+                ColumnLayout {
                     anchors.centerIn: parent
-                    text: tableRoot.loading ? "Carregando..." : (tableRoot.errorMessage.length > 0 ? tableRoot.errorMessage : "Sem resultados.")
-                    color: tableRoot.errorMessage.length > 0 ? Theme.error : Theme.textSecondary
-                    font.pixelSize: 14
+                    spacing: Theme.spacingLarge
+                    
+                    Item {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: 64
+                        Layout.preferredHeight: 64
+                        
+                        Image {
+                            id: stateIcon
+                            anchors.fill: parent
+                            source: tableRoot.loading ? "qrc:/qt/qml/sofa/ui/assets/buffer-brands-solid-full.svg" : (tableRoot.errorMessage.length > 0 ? "qrc:/qt/qml/sofa/ui/assets/eye-slash-solid-full.svg" : "qrc:/qt/qml/sofa/ui/assets/table-list-solid-full.svg")
+                            sourceSize.width: 64
+                            sourceSize.height: 64
+                            visible: false
+                        }
+                         
+                        ColorOverlay {
+                            anchors.fill: stateIcon
+                            source: stateIcon
+                            color: Theme.textSecondary
+                            opacity: 0.1
+                        }
+                        
+                        // Simple rotation for loading
+                        RotationAnimator on rotation {
+                            from: 0; to: 360; duration: 2000
+                            loops: Animation.Infinite
+                            running: tableRoot.loading
+                        }
+                    }
+                    
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: tableRoot.loading ? "Loading Data..." : (tableRoot.errorMessage.length > 0 ? "Error Loading Data" : "No Data Found")
+                        color: Theme.textPrimary
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+                    
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.maximumWidth: 400
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                        text: tableRoot.errorMessage.length > 0 ? tableRoot.errorMessage : "The query returned no results."
+                        color: Theme.textSecondary
+                        font.pixelSize: 14
+                        visible: !tableRoot.loading
+                    }
+                    
+                    AppButton {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Try Again"
+                        isPrimary: true
+                        visible: tableRoot.errorMessage.length > 0
+                        onClicked: tableRoot.loadData()
+                    }
                 }
             }
+
 
             function loadViews() {
                 var list = App.getViews(schema, tableName)

@@ -13,6 +13,7 @@ Sofa Studio is a database client built with Qt Quick (QML), focusing on top-tier
 *   **Relevant Components are Dedicated Types**: Each relevant custom component must exist as an isolated type (QML file) and, when necessary, a C++ backing class.
 *   **Low Dependency on Complex External Components**: We prefer implementing essential components internally to maintain control over design and behavior.
 *   **Component Documentation**: Every relevant custom component must have its own documentation to guide evolution and maintain consistency.
+*   **Custom ToolTips (Popovers)**: Always use the custom style for tooltips (dark background, light border, specific tokens) to maintain visual consistency across the app. Avoid using default system tooltips.
 
 ## Structure (Shell)
 
@@ -79,6 +80,15 @@ SQL console with input and results.
 *   **Input**: `tableSchema` (JSON / variant).
 *   **Output**: Modified definition.
 *   **Persistence**: Saves to `LocalStore` via `App.saveView()`.
+
+### ToolTips & Popovers
+**Standard Pattern:** Custom QML `ToolTip` component.
+
+We use a specific visual style for information popovers to avoid generic system tooltips.
+*   **Background**: `Theme.surfaceHighlight`
+*   **Border**: `Theme.border` (width 1, radius 4)
+*   **Text**: `Theme.textPrimary` (pixelSize 12)
+*   **Behavior**: Default delay 500ms, timeout 5000ms.
 
 ## Component Documentation (Required)
 
