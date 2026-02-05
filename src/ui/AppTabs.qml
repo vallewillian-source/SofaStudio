@@ -9,6 +9,47 @@ Rectangle {
     property alias count: tabBar.count
     signal requestCloseTab(int index)
     signal newQueryClicked()
+    readonly property var avatarColors: Theme.connectionAvatarColors
+    property string activeConnectionName: {
+        var currentId = App.activeConnectionId
+        if (currentId === -1) {
+            return ""
+        }
+        
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            if (conns[i].id === currentId) {
+                return conns[i].name
+            }
+        }
+        return ""
+    }
+    property string activeConnectionColor: {
+        var currentId = App.activeConnectionId
+        if (currentId === -1) {
+            return ""
+        }
+        
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            if (conns[i].id === currentId) {
+                return conns[i].color || ""
+            }
+        }
+        return ""
+    }
+    readonly property color tabAccentColor: App.activeConnectionId === -1 ? Theme.accent : getAvatarColor(activeConnectionName, activeConnectionColor)
+
+    function getAvatarColor(name, colorValue) {
+        if (colorValue && colorValue.length > 0) return colorValue
+        if (!name) return avatarColors[0]
+        var hash = 0
+        for (var i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        var index = Math.abs(hash % avatarColors.length)
+        return avatarColors[index]
+    }
     
     implicitHeight: Theme.tabBarHeight
     color: Theme.surface
@@ -90,7 +131,7 @@ Rectangle {
                         Rectangle {
                             width: parent.width
                             height: 2
-                            color: Theme.accent
+                            color: tabAccentColor
                             anchors.top: parent.top
                             visible: parent.parent.checked
                         }
