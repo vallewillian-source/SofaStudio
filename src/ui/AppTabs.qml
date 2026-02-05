@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 Rectangle {
     id: control
@@ -85,6 +86,54 @@ Rectangle {
                     contentItem: RowLayout {
                         spacing: 8
                         
+                        Item {
+                            Layout.preferredWidth: model.type === "table" ? 14 : 0
+                            Layout.preferredHeight: model.type === "table" ? 14 : 0
+                            visible: model.type === "table"
+
+                            Image {
+                                id: tableTabIcon
+                                anchors.fill: parent
+                                source: model.type === "table" ? "assets/table-list-solid-full.svg" : ""
+                                sourceSize.width: 14
+                                sourceSize.height: 14
+                                visible: false
+                                opacity: 1
+                            }
+
+                            ColorOverlay {
+                                anchors.fill: tableTabIcon
+                                source: tableTabIcon
+                                visible: model.type === "table"
+                                color: "#FFFFFF"
+                                opacity: 0.7
+                            }
+                        }
+
+                        Item {
+                            Layout.preferredWidth: model.type === "sql" ? 14 : 0
+                            Layout.preferredHeight: model.type === "sql" ? 14 : 0
+                            visible: model.type === "sql"
+
+                            Image {
+                                id: sqlTabIcon
+                                anchors.fill: parent
+                                source: model.type === "sql" ? "assets/database-solid-full.svg" : ""
+                                sourceSize.width: 14
+                                sourceSize.height: 14
+                                visible: false
+                                opacity: 1
+                            }
+
+                            ColorOverlay {
+                                anchors.fill: sqlTabIcon
+                                source: sqlTabIcon
+                                visible: model.type === "sql"
+                                color: "#FFFFFF"
+                                opacity: 0.7
+                            }
+                        }
+
                         Text {
                             text: model.title
                             font: tabBtn.font
