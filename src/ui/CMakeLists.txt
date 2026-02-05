@@ -41,6 +41,7 @@ qt_add_qml_module(SofaUI
         assets/folder-tree-solid-full.svg
         assets/plug-solid-full.svg
         assets/rotate-right-solid-full.svg
+        assets/plus-solid-full.svg
     )
 
 target_include_directories(SofaUI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

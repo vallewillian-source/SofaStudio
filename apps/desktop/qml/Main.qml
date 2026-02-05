@@ -504,6 +504,20 @@ ApplicationWindow {
             property var currentViewData: null
             property var rawColumns: [] // Store raw columns for ViewEditor
             
+            // Helper to get active connection color
+            function getActiveConnectionColor() {
+                var currentId = App.activeConnectionId
+                if (currentId === -1) return Theme.accent
+                
+                var conns = App.connections
+                for (var i = 0; i < conns.length; i++) {
+                    if (conns[i].id === currentId) {
+                        return conns[i].color && conns[i].color.length > 0 ? conns[i].color : Theme.connectionAvatarColors[0]
+                    }
+                }
+                return Theme.accent
+            }
+
             color: Theme.background
             
             DataGridEngine {
@@ -515,7 +529,7 @@ ApplicationWindow {
                 id: toolbar
                 height: 48
                 width: parent.width
-                color: Theme.surface
+                color: Theme.background
                 border.color: Theme.border
                 border.width: 1
                 z: 10
@@ -530,11 +544,23 @@ ApplicationWindow {
                         text: ""
                         icon.source: "qrc:/qt/qml/sofa/ui/assets/rotate-right-solid-full.svg"
                         isPrimary: true
+                        accentColor: tableRoot.getActiveConnectionColor()
                         tooltip: "Refresh Data"
                         Layout.preferredHeight: 24
                         Layout.preferredWidth: 24
                         iconSize: 12
                         onClicked: tableRoot.loadData()
+                    }
+
+                    AppButton {
+                        text: "Add Row"
+                        icon.source: "qrc:/qt/qml/sofa/ui/assets/plus-solid-full.svg"
+                        isPrimary: true
+                        accentColor: tableRoot.getActiveConnectionColor()
+                        Layout.preferredHeight: 24
+                        iconSize: 12
+                        spacing: 4
+                        onClicked: console.log("Add row clicked")
                     }
 
                     Item { Layout.fillWidth: true }

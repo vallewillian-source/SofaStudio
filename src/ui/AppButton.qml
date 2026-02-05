@@ -11,10 +11,12 @@ Button {
     property color textColor: isPrimary ? "#000000" : Theme.textPrimary
     property string tooltip: ""
     property int iconSize: 16
+    spacing: 8
+    property color accentColor: Theme.accent
 
     // Reset default padding to ensure centering
     padding: 0
-    horizontalPadding: 0
+    horizontalPadding: control.text.length > 0 ? 12 : 0
     verticalPadding: 0
 
     ToolTip {
@@ -38,7 +40,7 @@ Button {
     }
 
     contentItem: RowLayout {
-        spacing: textItem.text.length > 0 ? 8 : 0
+        spacing: textItem.text.length > 0 ? control.spacing : 0
         
         Item {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
@@ -82,20 +84,13 @@ Button {
     }
 
     background: Rectangle {
-        implicitWidth: {
-            // Se tiver texto, calcula baseado no texto + padding
-            if (control.text.length > 0) {
-                return Math.max(100, (control.icon.source.toString().length > 0 ? 24 : 0) + control.text.length * 8 + 20)
-            }
-            // Se for apenas ícone, um quadrado
-            return Theme.buttonHeight
-        }
+        implicitWidth: Theme.buttonHeight
         implicitHeight: Theme.buttonHeight
         opacity: enabled ? 1 : 0.3
         color: {
-            if (control.pressed) return control.isPrimary ? Qt.darker(Theme.accent, 1.1) : Theme.surfaceHighlight
-            if (control.hovered) return control.isPrimary ? Theme.accentHover : Theme.surfaceHighlight
-            return control.isPrimary ? Theme.accent : Theme.surface
+            if (control.pressed) return control.isPrimary ? Qt.darker(control.accentColor, 1.1) : Theme.surfaceHighlight
+            if (control.hovered) return control.isPrimary ? Qt.lighter(control.accentColor, 1.1) : Theme.surfaceHighlight
+            return control.isPrimary ? control.accentColor : Theme.surface
         }
         border.color: control.isPrimary ? "transparent" : Theme.border
         border.width: 1
