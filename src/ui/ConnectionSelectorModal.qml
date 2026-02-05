@@ -38,6 +38,8 @@ Popup {
         Qt.lighter(Theme.accentDark2, 1.25),
         Qt.darker(Theme.accentDark1, 1.1)
     ]
+    readonly property int avatarSize: 32
+    readonly property int avatarRadius: Math.round(avatarSize * 0.28)
 
     function getAvatarColor(name) {
         if (!name) return avatarColors[0]
@@ -195,7 +197,7 @@ Popup {
                 width: connectionsList.width
                 height: 54
                 color: {
-                    if (ListView.isCurrentItem) return Theme.accent // Selected
+                    if (ListView.isCurrentItem && model.id !== -999) return Theme.accent // Selected
                     if (hoverHandler.hovered) return Theme.surfaceHighlight // Hover
                     return "transparent"
                 }
@@ -220,9 +222,9 @@ Popup {
 
                     // Avatar
                     Rectangle {
-                        Layout.preferredWidth: 32
-                        Layout.preferredHeight: 32
-                        radius: 16 // Circle
+                        Layout.preferredWidth: root.avatarSize
+                        Layout.preferredHeight: root.avatarSize
+                        radius: root.avatarRadius
                         color: model.type === "action" ? Theme.surfaceHighlight : root.getAvatarColor(model.name)
                         border.color: Theme.border
                         border.width: model.type === "action" ? 1 : 0
@@ -239,6 +241,7 @@ Popup {
                     // Content
                     ColumnLayout {
                         Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
                         spacing: 2
                         
                         Text {
@@ -246,6 +249,9 @@ Popup {
                             color: Theme.textPrimary
                             font.bold: true
                             font.pixelSize: 14
+                            horizontalAlignment: Text.AlignLeft
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
                         }
                         
                         Text {
@@ -254,6 +260,9 @@ Popup {
                                   model.dbType
                             color: Theme.textSecondary
                             font.pixelSize: 12
+                            horizontalAlignment: Text.AlignLeft
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
                         }
                     }
                     

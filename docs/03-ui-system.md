@@ -34,11 +34,11 @@ Sofa Studio is a database client built with Qt Quick (QML), focusing on top-tier
 
 **Base visual oficial (hex):**
 
-*   **Destaque principal**: `#01D4FE`
-*   **Destaque secundário**: `#60115F`
+*   **Destaque principal**: `#FFA507`
+*   **Destaque secundário**: `#FEB83B`
 *   **Background**: `#0F0F0F`
-*   **Destaque escuro 1**: `#0C2433`
-*   **Destaque escuro 2**: `#12414E`
+*   **Destaque escuro 1**: `#13132B`
+*   **Destaque escuro 2**: `#262645`
 
 **Regras de aplicação:**
 
