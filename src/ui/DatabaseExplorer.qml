@@ -121,6 +121,7 @@ Rectangle {
             id: treeView
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: currentConnectionId !== -1
             clip: true
             model: schemaModel
             
@@ -322,6 +323,40 @@ Rectangle {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: currentConnectionId === -1
+
+            ColumnLayout {
+                anchors.top: parent.top
+                anchors.topMargin: Theme.spacingMedium * 4
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Theme.spacingSmall
+                width: parent.width - (Theme.spacingMedium * 2)
+
+                Text {
+                    text: "Selecione uma conexão acima"
+                    color: Theme.textPrimary
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    text: "para começar a explorar seu banco"
+                    color: Theme.textSecondary
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
             }
         }
