@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 Rectangle {
     id: root
@@ -99,6 +100,49 @@ Rectangle {
 
     // --- Components ---
 
+    readonly property var avatarColors: Theme.connectionAvatarColors
+    property string activeConnectionName: {
+        var currentId = App.activeConnectionId
+        if (currentId === -1) {
+            return ""
+        }
+        
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            if (conns[i].id === currentId) {
+                return conns[i].name
+            }
+        }
+        return ""
+    }
+    property string activeConnectionColor: {
+        var currentId = App.activeConnectionId
+        if (currentId === -1) {
+            return ""
+        }
+        
+        var conns = App.connections
+        for (var i = 0; i < conns.length; i++) {
+            if (conns[i].id === currentId) {
+                return conns[i].color || ""
+            }
+        }
+        return ""
+    }
+    
+    function getAvatarColor(name, colorValue) {
+        if (colorValue && colorValue.length > 0) return colorValue
+        if (!name) return avatarColors[0]
+        var hash = 0
+        for (var i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        var index = Math.abs(hash % avatarColors.length)
+        return avatarColors[index]
+    }
+    
+    readonly property color connectionAccentColor: App.activeConnectionId === -1 ? Theme.accent : getAvatarColor(activeConnectionName, activeConnectionColor)
+
     component ExplorerRow : Rectangle {
         id: row
         property string label
@@ -108,6 +152,7 @@ Rectangle {
         property int level: 0
         property bool isSelected: false
         property color iconColor: Theme.accent
+        property real iconOpacity: 1.0
         property bool isDimmed: false
         signal clicked()
 
@@ -136,15 +181,47 @@ Rectangle {
                 }
             }
 
-            // Icon
-            Text {
-                visible: icon !== ""
-                text: icon
-                color: row.iconColor
-                font.pixelSize: 12
+            Item {
+                id: iconRoot
                 Layout.preferredWidth: 16
-                horizontalAlignment: Text.AlignHCenter
-                opacity: row.isDimmed ? 0.7 : 1.0
+                Layout.preferredHeight: 16
+                visible: icon !== ""
+                property bool isSvg: icon.indexOf(".svg") !== -1
+                
+                Text {
+                    anchors.centerIn: parent
+                    visible: !iconRoot.isSvg
+                    text: icon
+                    color: row.iconColor
+                    font.pixelSize: 12
+                    horizontalAlignment: Text.AlignHCenter
+                    opacity: row.iconOpacity
+                }
+                
+                Item {
+                    anchors.centerIn: parent
+                    width: 14
+                    height: 14
+                    visible: iconRoot.isSvg
+                    
+                    Image {
+                        id: svgIcon
+                        anchors.fill: parent
+                        source: iconRoot.isSvg ? icon : ""
+                        sourceSize.width: 14
+                        sourceSize.height: 14
+                        visible: false
+                        opacity: 1
+                    }
+
+                    ColorOverlay {
+                        anchors.fill: svgIcon
+                        source: svgIcon
+                        visible: iconRoot.isSvg
+                        color: row.iconColor
+                        opacity: row.iconOpacity
+                    }
+                }
             }
 
             // Label
@@ -231,8 +308,8 @@ Rectangle {
                 // 1. Schema / Group Row
                 ExplorerRow {
                     label: schemaDelegate.isGroup ? "Hidden Schemas" : model.name
-                    icon: schemaDelegate.isGroup ? "👁" : "📦" 
-                    iconColor: schemaDelegate.isGroup ? Theme.textSecondary : Theme.accent
+                    icon: schemaDelegate.isGroup ? "👁" : "assets/folder-tree-solid-full.svg" 
+                    iconColor: schemaDelegate.isGroup ? Theme.textSecondary : root.connectionAccentColor
                     isExpandable: true
                     isExpanded: schemaDelegate.isExpanded
                     level: 0
@@ -248,8 +325,9 @@ Rectangle {
                     model: (!schemaDelegate.isGroup && isExpanded) ? tableList : null
                     delegate: ExplorerRow {
                         label: name
-                        icon: "▦"
-                        iconColor: Theme.textPrimary // Neutral color for tables
+                        icon: "assets/table-list-solid-full.svg"
+                        iconColor: "#FFFFFF"
+                        iconOpacity: 0.7
                         level: 1
                         onClicked: {
                             console.log("\u001b[35m🗂️ Abrindo tabela\u001b[0m", schemaDelegate.schemaName + "." + name)
@@ -275,7 +353,7 @@ Rectangle {
                             // Hidden Schema Row
                             ExplorerRow {
                                 label: name
-                                icon: "📦"
+                                icon: "assets/folder-tree-solid-full.svg"
                                 iconColor: Theme.textSecondary
                                 isExpandable: true
                                 isExpanded: hiddenSchemaDelegate.isExpanded
@@ -289,8 +367,9 @@ Rectangle {
                                 model: isExpanded ? tableList : null
                                 delegate: ExplorerRow {
                                     label: name
-                                    icon: "▦"
-                                    iconColor: Theme.textSecondary
+                                    icon: "assets/table-list-solid-full.svg"
+                                    iconColor: "#FFFFFF"
+                                    iconOpacity: 0.7
                                     level: 2
                                     isDimmed: true
                                     onClicked: {
