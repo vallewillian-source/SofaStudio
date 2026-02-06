@@ -181,16 +181,65 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        Controls.TabBar {
-            id: tabBar
-            Layout.preferredWidth: contentWidth
+        Controls.Button {
+            id: scrollLeftBtn
+            Layout.preferredWidth: tabScroll.contentWidth > tabScroll.width ? 24 : 0
             Layout.fillHeight: true
-            background: null // Transparent
-            
-            Repeater {
-                model: control.tabsModel
+            flat: true
+            visible: tabScroll.contentWidth > tabScroll.width
+            contentItem: Text {
+                text: "‹"
+                font.pixelSize: 18
+                color: scrollLeftBtn.hovered ? Theme.textPrimary : Theme.textSecondary
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            onClicked: {
+                var maxX = Math.max(0, tabScroll.contentWidth - tabScroll.width)
+                tabScroll.contentX = Math.max(0, tabScroll.contentX - 120)
+                if (tabScroll.contentX > maxX) tabScroll.contentX = maxX
+            }
+        }
+
+        Flickable {
+            id: tabScroll
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentWidth: tabBar.contentWidth
+            contentHeight: height
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.HorizontalFlick
+            clip: true
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                onWheel: (wheel) => {
+                    var delta = 0
+                    if (wheel.angleDelta.x !== 0) {
+                        delta = -wheel.angleDelta.x
+                    } else if (wheel.angleDelta.y !== 0) {
+                        delta = -wheel.angleDelta.y
+                    }
+                    if (delta === 0) return
+                    var maxX = Math.max(0, tabScroll.contentWidth - tabScroll.width)
+                    var nextX = tabScroll.contentX + delta
+                    if (nextX < 0) nextX = 0
+                    if (nextX > maxX) nextX = maxX
+                    tabScroll.contentX = nextX
+                }
+            }
+
+            Controls.TabBar {
+                id: tabBar
+                width: contentWidth
+                height: parent.height
+                background: null // Transparent
                 
-                Controls.TabButton {
+                Repeater {
+                    model: control.tabsModel
+                    
+                    Controls.TabButton {
                     id: tabBtn
                     width: implicitWidth + 20
                     property bool dragging: false
@@ -390,7 +439,27 @@ Rectangle {
                             visible: !tabBtn.checked // Hide separator on active tab? Or keep it.
                         }
                     }
+                    }
                 }
+            }
+        }
+
+        Controls.Button {
+            id: scrollRightBtn
+            Layout.preferredWidth: tabScroll.contentWidth > tabScroll.width ? 24 : 0
+            Layout.fillHeight: true
+            flat: true
+            visible: tabScroll.contentWidth > tabScroll.width
+            contentItem: Text {
+                text: "›"
+                font.pixelSize: 18
+                color: scrollRightBtn.hovered ? Theme.textPrimary : Theme.textSecondary
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            onClicked: {
+                var maxX = Math.max(0, tabScroll.contentWidth - tabScroll.width)
+                tabScroll.contentX = Math.min(maxX, tabScroll.contentX + 120)
             }
         }
 
