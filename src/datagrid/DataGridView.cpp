@@ -247,7 +247,9 @@ void DataGridView::paint(QPainter* painter)
                 
                 // Text
                 QString text = m_engine->getData(r, c).toString();
-                painter->setPen(m_textColor);
+                QColor cellTextColor = m_textColor;
+                cellTextColor.setAlphaF(0.9);
+                painter->setPen(cellTextColor);
                 painter->drawText(cellRect.adjusted(8, 0, -5, 0), Qt::AlignLeft | Qt::AlignVCenter, text);
             }
             currentX += colW;
