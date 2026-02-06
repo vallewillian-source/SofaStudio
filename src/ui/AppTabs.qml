@@ -203,12 +203,20 @@ Rectangle {
                         drag.target: null
                         preventStealing: true
                         onPressed: {
+                            if (closeMouseArea.containsMouse) {
+                                mouse.accepted = false
+                                return
+                            }
                             if (model.type === "home") return
                             tabBar.currentIndex = index
                             tabBtn.dragging = true
                             control.dragIndex = index
                         }
                         onClicked: {
+                            if (closeMouseArea.containsMouse) {
+                                mouse.accepted = false
+                                return
+                            }
                             tabBar.currentIndex = index
                         }
                         onPositionChanged: {
