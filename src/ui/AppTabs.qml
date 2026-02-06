@@ -8,6 +8,7 @@ Rectangle {
     property var tabsModel: null // ListModel
     property alias currentIndex: tabBar.currentIndex
     property alias count: tabBar.count
+    property int dragIndex: -1
     signal requestCloseTab(int index)
     signal requestCloseAllTabs()
     signal requestCloseOthers(int index)
@@ -53,6 +54,43 @@ Rectangle {
         }
         var index = Math.abs(hash % avatarColors.length)
         return avatarColors[index]
+    }
+
+    function moveTab(from, to) {
+        if (!control.tabsModel) return from
+        if (from === to) return from
+        if (from < 0 || to < 0 || from >= control.tabsModel.count || to >= control.tabsModel.count) return from
+        if (control.tabsModel.get(from).type === "home") return from
+
+        var newIndex = to
+        if (control.tabsModel.get(to).type === "home") {
+            newIndex = 1
+        }
+        if (newIndex === from) return from
+
+        var current = tabBar.currentIndex
+        control.tabsModel.move(from, newIndex, 1)
+
+        if (current === from) {
+            tabBar.currentIndex = newIndex
+        } else if (from < current && newIndex >= current) {
+            tabBar.currentIndex = current - 1
+        } else if (from > current && newIndex <= current) {
+            tabBar.currentIndex = current + 1
+        }
+
+        return newIndex
+    }
+
+    function indexFromPosition(x) {
+        if (!tabBar) return -1
+        for (var i = 0; i < tabBar.count; i++) {
+            var item = tabBar.itemAt(i)
+            if (!item) continue
+            var mid = item.x + item.width / 2
+            if (x < mid) return i
+        }
+        return Math.max(0, tabBar.count - 1)
     }
     
     implicitHeight: Theme.tabBarHeight
@@ -126,6 +164,45 @@ Rectangle {
                 Controls.TabButton {
                     id: tabBtn
                     width: implicitWidth + 20
+                    property bool dragging: false
+                    
+                    MouseArea {
+                        id: dragArea
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton
+                        drag.axis: Drag.XAxis
+                        drag.target: null
+                        preventStealing: true
+                        onPressed: {
+                            if (model.type === "home") return
+                            tabBar.currentIndex = index
+                            tabBtn.dragging = true
+                            control.dragIndex = index
+                        }
+                        onClicked: {
+                            tabBar.currentIndex = index
+                        }
+                        onPositionChanged: {
+                            if (!tabBtn.dragging || control.dragIndex === -1) return
+                            var pos = tabBtn.mapToItem(tabBar, mouse.x, mouse.y)
+                            var targetIndex = control.indexFromPosition(pos.x)
+                            if (targetIndex === -1) return
+                            var newIndex = control.moveTab(control.dragIndex, targetIndex)
+                            control.dragIndex = newIndex
+                        }
+                        onReleased: {
+                            tabBtn.dragging = false
+                            if (control.dragIndex === index) {
+                                control.dragIndex = -1
+                            }
+                        }
+                        onCanceled: {
+                            tabBtn.dragging = false
+                            if (control.dragIndex === index) {
+                                control.dragIndex = -1
+                            }
+                        }
+                    }
                     
                     MouseArea {
                         anchors.fill: parent
