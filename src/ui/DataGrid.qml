@@ -14,6 +14,8 @@ Rectangle {
     property int currentPage: 1
     property bool canPrevious: false
     property bool canNext: false
+    property color addRowAccentColor: Theme.accent
+    signal addRowClicked()
     signal previousClicked()
     signal nextClicked()
     
@@ -110,6 +112,19 @@ Rectangle {
                 anchors.rightMargin: Theme.spacingMedium
                 spacing: Theme.spacingMedium
                 
+                AppButton {
+                    text: "Add Row"
+                    icon.source: "qrc:/qt/qml/sofa/ui/assets/plus-solid-full.svg"
+                    isPrimary: true
+                    accentColor: root.addRowAccentColor
+                    Layout.preferredHeight: 24
+                    iconSize: 12
+                    spacing: 4
+                    opacity: 0.8
+                    font.weight: Font.DemiBold
+                    onClicked: root.addRowClicked()
+                }
+
                 Label {
                     text: "Rows: " + (view.engine ? view.engine.rowCount : 0)
                     color: Theme.textSecondary

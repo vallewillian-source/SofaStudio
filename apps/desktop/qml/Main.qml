@@ -552,19 +552,6 @@ ApplicationWindow {
                     }
 
                     AppButton {
-                        text: "Add Row"
-                        icon.source: "qrc:/qt/qml/sofa/ui/assets/plus-solid-full.svg"
-                        isPrimary: true
-                        accentColor: tableRoot.getActiveConnectionColor()
-                        Layout.preferredHeight: 24
-                        iconSize: 12
-                        spacing: 4
-                        opacity: 0.8
-                        font.weight: Font.DemiBold
-                        onClicked: console.log("Add row clicked")
-                    }
-
-                    AppButton {
                         id: btnCount
                         text: "Count"
                         icon.source: "qrc:/qt/qml/sofa/ui/assets/hashtag-solid-full.svg"
@@ -577,7 +564,7 @@ ApplicationWindow {
                         font.weight: Font.DemiBold
                         
                         // Dynamic padding to shrink button when loading
-                        horizontalPadding: isLoading ? 4 : (text.length > 0 ? 12 : 0)
+                        horizontalPadding: (text.length > 0 ? 12 : 0)
                         
                         property bool isLoading: false
                         property string originalText: "Count"
@@ -606,7 +593,7 @@ ApplicationWindow {
                         
                         // Custom content item to support loading animation
                         contentItem: Item {
-                            implicitWidth: btnCount.isLoading ? 16 : (rowLayout.implicitWidth)
+                            implicitWidth: rowLayout.implicitWidth
                             implicitHeight: 24 // Match button height for proper vertical centering
                             
                             // Normal Content
@@ -614,7 +601,7 @@ ApplicationWindow {
                                 id: rowLayout
                                 anchors.centerIn: parent
                                 spacing: btnCount.spacing
-                                visible: !btnCount.isLoading
+                                visible: true
                                 
                                 Image {
                                     id: iconItem
@@ -642,64 +629,13 @@ ApplicationWindow {
                                 }
                             }
                             
-                            // Loading Indicator
-                            BusyIndicator {
-                                anchors.centerIn: parent
-                                width: 16
-                                height: 16
-                                visible: btnCount.isLoading
-                                running: btnCount.isLoading
-                                
-                                contentItem: Item {
-                                    RotationAnimator on rotation {
-                                        running: btnCount.isLoading
-                                        loops: Animation.Infinite
-                                        duration: 1500
-                                        from: 0 ; to: 360
-                                    }
-                                    
-                                    Rectangle {
-                                        id: rect
-                                        width: 16
-                                        height: 16
-                                        color: "transparent"
-                                        radius: 8
-                                        border.width: 2
-                                        border.color: btnCount.textColor
-                                        opacity: 0.3
-                                    }
-                                    
-                                    Rectangle {
-                                        width: 16
-                                        height: 16
-                                        color: "transparent"
-                                        radius: 8
-                                        border.width: 2
-                                        border.color: btnCount.textColor
-                                        
-                                        // Clip half to create spinner effect
-                                        layer.enabled: true
-                                        layer.effect: OpacityMask {
-                                            maskSource: Rectangle {
-                                                width: 16
-                                                height: 16
-                                                radius: 8
-                                                gradient: Gradient {
-                                                    GradientStop { position: 0.0; color: "transparent" }
-                                                    GradientStop { position: 0.5; color: "black" }
-                                                    GradientStop { position: 1.0; color: "black" }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
 
                         onClicked: {
                             if (!isLoading) {
                                 isLoading = true
                                 countStartTime = Date.now()
+                                text = "loading..."
                                 tableRoot.runCount()
                             }
                         }
@@ -746,8 +682,10 @@ ApplicationWindow {
                 pageSize: tableRoot.pageSize
                 canPrevious: tableRoot.pageIndex > 0 && !tableRoot.loading
                 canNext: tableRoot.hasMore && !tableRoot.loading
+                addRowAccentColor: tableRoot.getActiveConnectionColor()
                 onPreviousClicked: tableRoot.previousPage()
                 onNextClicked: tableRoot.nextPage()
+                onAddRowClicked: console.log("Add row clicked")
             }
             
             // ViewEditor removed
