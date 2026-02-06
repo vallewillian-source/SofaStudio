@@ -31,11 +31,12 @@ ApplicationWindow {
     }
     
     function openTable(schema, tableName) {
-        var title = "Table: " + schema + "." + tableName
-        console.log("\u001b[36m📌 Abrindo aba\u001b[0m", title)
+        var title = tableName
+        console.log("\u001b[36m📌 Abrindo aba\u001b[0m", schema + "." + tableName)
         // Check if already open
         for (var i = 0; i < tabModel.count; i++) {
-            if (tabModel.get(i).title === title) {
+            var item = tabModel.get(i)
+            if (item.type === "table" && item.schema === schema && item.tableName === tableName) {
                 appTabs.currentIndex = i
                 return
             }
