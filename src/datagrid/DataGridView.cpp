@@ -308,7 +308,12 @@ void DataGridView::paint(QPainter* painter)
 
                 // Selection
                 if (r == m_selectedRow && c == m_selectedCol) {
-                     painter->fillRect(cellRect, m_selectionColor);
+                     painter->save();
+                     painter->setPen(Qt::NoPen);
+                     painter->setBrush(m_selectionColor);
+                     // Inset slightly to make rounding visible and clean
+                     painter->drawRoundedRect(cellRect.adjusted(1, 1, -1, -1), 4, 4);
+                     painter->restore();
                 }
 
                 // Borders
@@ -318,7 +323,19 @@ void DataGridView::paint(QPainter* painter)
                 // Text
                 QString text = m_engine->getData(r, c).toString();
                 QColor cellTextColor = m_textColor;
-                cellTextColor.setAlphaF(0.9);
+                
+                // If selected, force dark text for better contrast with the colored background
+                if (r == m_selectedRow && c == m_selectedCol) {
+                    cellTextColor = QColor("#000000"); // Black text for selection
+                    
+                    QFont selectedFont = font;
+                    selectedFont.setPixelSize(font.pixelSize() + 1);
+                    painter->setFont(selectedFont);
+                } else {
+                    cellTextColor.setAlphaF(0.9);
+                    painter->setFont(font);
+                }
+                
                 painter->setPen(cellTextColor);
                 painter->drawText(cellRect.adjusted(8, 0, -5, 0), Qt::AlignLeft | Qt::AlignVCenter, text);
             }

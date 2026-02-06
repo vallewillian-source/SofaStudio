@@ -57,13 +57,10 @@ QtObject {
     }
 
     function tintColor(base, tint, factor) {
-        // Simple manual mixing since Qt.tint() is not available in pure JS/QML logic easily without item
-        // But QML has Qt.tint(base, tint) which works on color objects
-        // Qt.tint(color base, color tint) returns a color.
-        // If we want "slightly tinted", we can use a tint color with low alpha.
-        // e.g. Qt.tint(base, Qt.rgba(tint.r, tint.g, tint.b, factor))
+        // Ensure tint is a color object (handles strings like "#RRGGBB")
+        var tObj = Qt.tint("#00000000", tint)
         
-        var t = Qt.rgba(tint.r, tint.g, tint.b, factor)
+        var t = Qt.rgba(tObj.r, tObj.g, tObj.b, factor)
         return Qt.tint(base, t)
     }
 }
