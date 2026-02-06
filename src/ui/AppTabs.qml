@@ -53,7 +53,7 @@ Rectangle {
     }
     
     implicitHeight: Theme.tabBarHeight
-    color: Theme.surface
+    color: Theme.background
     border.color: Theme.border
     border.width: 1
 
