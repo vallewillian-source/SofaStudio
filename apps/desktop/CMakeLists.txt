@@ -13,7 +13,7 @@ qt_add_executable(sofa-desktop
     main.cpp
 )
 
-set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/../../src/ui/assets/Ícone.icns")
+set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/../../src/ui/assets/SofaAppIcon.icns")
 set_source_files_properties(${APP_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 target_sources(sofa-desktop PRIVATE ${APP_ICON})
 
@@ -36,5 +36,5 @@ target_link_libraries(sofa-desktop
 set_target_properties(sofa-desktop PROPERTIES OUTPUT_NAME "sofa-studio")
 set_target_properties(sofa-desktop PROPERTIES
     MACOSX_BUNDLE TRUE
-    MACOSX_BUNDLE_ICON_FILE "Ícone.icns"
+    MACOSX_BUNDLE_ICON_FILE "SofaAppIcon.icns"
 )
