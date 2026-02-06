@@ -66,6 +66,45 @@ Rectangle {
         z: 2
     }
 
+    AppMenu {
+        id: contextMenu
+        property int targetIndex: -1
+        
+        Controls.MenuItem {
+            text: "Close Tab"
+            visible: contextMenu.targetIndex !== -1 && control.tabsModel && control.tabsModel.get(contextMenu.targetIndex).type !== "home"
+            height: visible ? implicitHeight : 0
+            onTriggered: console.log("Close tab", contextMenu.targetIndex)
+        }
+
+        Controls.MenuItem {
+            text: "Close All Tabs"
+            onTriggered: console.log("Close all tabs")
+        }
+
+        Controls.MenuItem {
+            text: "Close Others"
+            onTriggered: console.log("Close others")
+        }
+
+        Controls.MenuItem {
+            text: "Close To the Right"
+            onTriggered: console.log("Close to the right")
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.RightButton
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton) {
+                contextMenu.targetIndex = -1
+                contextMenu.popup()
+            }
+        }
+        z: 0
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -83,6 +122,18 @@ Rectangle {
                     id: tabBtn
                     width: implicitWidth + 20
                     
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        cursorShape: Qt.ArrowCursor
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                contextMenu.targetIndex = index
+                                contextMenu.popup()
+                            }
+                        }
+                    }
+
                     contentItem: RowLayout {
                         spacing: 8
                         
