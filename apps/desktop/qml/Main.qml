@@ -498,6 +498,9 @@ ApplicationWindow {
             property bool empty: false
             property bool gridControlsVisible: true
             property string requestTag: ""
+            property int pageSize: 100
+            property int pageIndex: 0
+            property bool hasMore: false
             
             // Helper to get active connection color
             function getActiveConnectionColor() {
@@ -739,6 +742,12 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 engine: gridEngine
                 visible: !tableRoot.loading && !tableRoot.empty && tableRoot.errorMessage.length === 0
+                currentPage: tableRoot.pageIndex + 1
+                pageSize: tableRoot.pageSize
+                canPrevious: tableRoot.pageIndex > 0 && !tableRoot.loading
+                canNext: tableRoot.hasMore && !tableRoot.loading
+                onPreviousClicked: tableRoot.previousPage()
+                onNextClicked: tableRoot.nextPage()
             }
             
             // ViewEditor removed
@@ -818,12 +827,14 @@ ApplicationWindow {
                 tableRoot.errorMessage = ""
                 tableRoot.empty = false
                 tableRoot.loading = false
+                tableRoot.hasMore = false
                 if (tableName) {
                     
                     console.log("\u001b[34m📥 Buscando dados\u001b[0m", schema + "." + tableName)
-                    tableRoot.requestTag = "table:" + schema + "." + tableName
+                    tableRoot.requestTag = "table:" + schema + "." + tableName + ":page:" + tableRoot.pageIndex
                     tableRoot.loading = true
-                    var ok = App.getDatasetAsync(schema, tableName, 100, 0, tableRoot.requestTag)
+                    var offset = tableRoot.pageIndex * tableRoot.pageSize
+                    var ok = App.getDatasetAsync(schema, tableName, tableRoot.pageSize, offset, tableRoot.requestTag)
                     if (!ok) {
                         tableRoot.loading = false
                         tableRoot.errorMessage = App.lastError
@@ -838,6 +849,20 @@ ApplicationWindow {
             function runCount() {
                 var tag = "count_" + Date.now()
                 App.getCount(schema, tableName, tag)
+            }
+
+            function nextPage() {
+                if (!tableRoot.loading && tableRoot.hasMore) {
+                    tableRoot.pageIndex += 1
+                    tableRoot.loadData()
+                }
+            }
+
+            function previousPage() {
+                if (!tableRoot.loading && tableRoot.pageIndex > 0) {
+                    tableRoot.pageIndex -= 1
+                    tableRoot.loadData()
+                }
             }
 
             Keys.onPressed: (event) => {
@@ -865,6 +890,7 @@ ApplicationWindow {
                     tableRoot.loading = false
                     tableRoot.errorMessage = ""
                     console.log("\u001b[32m✅ Dataset recebido\u001b[0m", "colunas=" + (result.columns ? result.columns.length : 0) + " linhas=" + (result.rows ? result.rows.length : 0))
+                    tableRoot.hasMore = result.hasMore === true
                     if (!result.columns || result.columns.length === 0) {
                         tableRoot.errorMessage = "Falha ao carregar dados da tabela."
                         tableRoot.empty = false
@@ -880,6 +906,7 @@ ApplicationWindow {
                     tableRoot.loading = false
                     tableRoot.empty = false
                     tableRoot.errorMessage = error
+                    tableRoot.hasMore = false
                     gridEngine.clear()
                 }
                 function onDatasetCanceled(tag) {
@@ -887,6 +914,7 @@ ApplicationWindow {
                     tableRoot.loading = false
                     tableRoot.empty = false
                     tableRoot.errorMessage = "Query cancelada."
+                    tableRoot.hasMore = false
                     gridEngine.clear()
                 }
 

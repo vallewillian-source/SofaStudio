@@ -479,15 +479,13 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         return result;
     }
     
-    QString sql = QString("SELECT * FROM \"%1\".\"%2\" LIMIT %3 OFFSET %4")
-                      .arg(schema).arg(table).arg(limit).arg(offset);
-    
     if (m_logger) {
         m_logger->info("\x1b[36m🧭 Dataset\x1b[0m schema=" + schema + " tabela=" + table + " limit=" + QString::number(limit) + " offset=" + QString::number(offset));
     }
     
     DatasetRequest request;
     request.limit = limit;
+    request.offset = offset;
     
     auto queryProvider = m_currentConnection->query();
     if (!queryProvider) {
@@ -499,7 +497,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         return result;
     }
     
-    auto page = queryProvider->execute(sql, request);
+    auto page = queryProvider->getDataset(schema, table, request);
     if (m_logger && !page.warning.isEmpty()) {
         m_logger->warning("\x1b[33m⚠️ Dataset\x1b[0m " + page.warning);
     }
@@ -533,6 +531,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         rows.append(QVariant(r));
     }
     result["rows"] = rows;
+    result["hasMore"] = page.hasMore;
     
     if (m_logger) {
         m_logger->info("\x1b[35m🧪 Dataset rows payload\x1b[0m total=" + QString::number(rows.size()) +

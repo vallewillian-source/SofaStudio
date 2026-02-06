@@ -30,8 +30,8 @@ public:
 class IQueryProvider {
 public:
     virtual ~IQueryProvider() = default;
-    // Execute a raw query
     virtual DatasetPage execute(const QString& query, const DatasetRequest& request) = 0;
+    virtual DatasetPage getDataset(const QString& schema, const QString& table, const DatasetRequest& request) = 0;
     virtual int count(const QString& schema, const QString& table) { return -1; }
     virtual int backendPid() { return -1; }
 };

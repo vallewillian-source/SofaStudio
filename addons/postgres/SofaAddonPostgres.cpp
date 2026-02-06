@@ -245,6 +245,18 @@ DatasetPage PostgresQueryProvider::execute(const QString& queryStr, const Datase
     return page;
 }
 
+DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QString& table, const DatasetRequest& request) {
+    DatasetRequest req = request;
+    int limit = req.limit > 0 ? req.limit : 100;
+    int offset = req.offset > 0 ? req.offset : 0;
+    int sqlLimit = limit + 1;
+    req.limit = limit;
+
+    QString sql = QString("SELECT * FROM \"%1\".\"%2\" LIMIT %3 OFFSET %4")
+                      .arg(schema).arg(table).arg(sqlLimit).arg(offset);
+    return execute(sql, req);
+}
+
 int PostgresQueryProvider::count(const QString& schema, const QString& table) {
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     if (!db.isOpen()) {

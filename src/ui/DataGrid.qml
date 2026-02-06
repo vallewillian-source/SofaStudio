@@ -10,6 +10,12 @@ Rectangle {
     
     // Public API
     property alias engine: view.engine
+    property int pageSize: 100
+    property int currentPage: 1
+    property bool canPrevious: false
+    property bool canNext: false
+    signal previousClicked()
+    signal nextClicked()
     
     ColumnLayout {
         anchors.fill: parent
@@ -92,7 +98,7 @@ Rectangle {
         // Footer / Status Bar
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 24
+            Layout.preferredHeight: 36
             color: Theme.surface
             border.color: Theme.border
             border.width: 1
@@ -111,6 +117,37 @@ Rectangle {
                 }
                 
                 Item { Layout.fillWidth: true }
+
+                // Pagination
+                RowLayout {
+                    spacing: 8
+                    
+                    AppButton {
+                        text: "Previous"
+                        Layout.preferredHeight: 24
+                        font.pixelSize: 11
+                        isPrimary: false
+                        enabled: root.canPrevious
+                        opacity: root.canPrevious ? 1.0 : 0.5
+                        onClicked: root.previousClicked()
+                    }
+                    
+                    Label {
+                        text: "Page " + root.currentPage
+                        color: Theme.textSecondary
+                        font.pixelSize: 11
+                    }
+                    
+                    AppButton {
+                        text: "Next"
+                        Layout.preferredHeight: 24
+                        font.pixelSize: 11
+                        isPrimary: false
+                        enabled: root.canNext
+                        opacity: root.canNext ? 1.0 : 0.5
+                        onClicked: root.nextClicked()
+                    }
+                }
             }
         }
     }

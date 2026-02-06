@@ -16,6 +16,7 @@ QVariantMap QueryWorker::datasetToVariant(const DatasetPage& page)
         result["warning"] = page.warning;
     }
     result["executionTime"] = (double)page.executionTimeMs;
+    result["hasMore"] = page.hasMore;
 
     QVariantList columns;
     for (const auto& col : page.columns) {
@@ -116,12 +117,10 @@ void QueryWorker::runDataset(const QVariantMap& connectionInfo, const QString& s
     int backendPid = queryProvider->backendPid();
     emit datasetStarted(requestTag, backendPid);
 
-    QString sql = QString("SELECT * FROM \"%1\".\"%2\" LIMIT %3 OFFSET %4")
-                      .arg(schema).arg(table).arg(limit).arg(offset);
-
     DatasetRequest request;
     request.limit = limit;
-    DatasetPage page = queryProvider->execute(sql, request);
+    request.offset = offset;
+    DatasetPage page = queryProvider->getDataset(schema, table, request);
     if (!page.warning.isEmpty() && page.columns.empty()) {
         emit datasetError(requestTag, page.warning);
         return;

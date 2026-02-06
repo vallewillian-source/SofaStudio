@@ -35,6 +35,7 @@ struct TableSchema {
 struct DatasetRequest {
     QString cursor; // specific implementation dependent
     int limit = 100;
+    int offset = 0;
     // Simple sort for now: "column ASC" or "column DESC"
     QString sort;
     QString filter;
