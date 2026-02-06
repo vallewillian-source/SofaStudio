@@ -25,7 +25,9 @@ int main(int argc, char *argv[])
 {
     QQuickStyle::setStyle("Basic");
     QGuiApplication app(argc, argv);
-    app.setWindowIcon(QIcon(u":/qt/qml/sofa/ui/assets/logo.svg"_s));
+    // No macOS, o ícone é gerenciado pelo Info.plist (via CMake MACOSX_BUNDLE_ICON_FILE).
+    // Definir setWindowIcon manualmente com um SVG diferente pode causar inconsistências e erros.
+    // app.setWindowIcon(QIcon(u":/qt/qml/sofa/ui/assets/logo.svg"_s));
 
     // Bootstrap Services
     auto logger = std::make_shared<ConsoleLogger>();

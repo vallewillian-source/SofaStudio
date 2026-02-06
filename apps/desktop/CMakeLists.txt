@@ -33,8 +33,10 @@ target_link_libraries(sofa-desktop
     PRIVATE SofaAddonPostgres
 )
 
-set_target_properties(sofa-desktop PROPERTIES OUTPUT_NAME "sofa-studio")
+set_target_properties(sofa-desktop PROPERTIES OUTPUT_NAME "SofaStudio")
 set_target_properties(sofa-desktop PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_ICON_FILE "SofaAppIcon.icns"
+    MACOSX_BUNDLE_BUNDLE_NAME "SofaStudio"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "com.sofastudio.desktop"
 )
