@@ -84,54 +84,81 @@ Popup {
         id: connectionsModel
     }
 
-    function syncModel() {
+    function syncModel(filterText) {
         connectionsModel.clear()
+        var filter = (filterText || "").toLowerCase()
+        
+        // Helper to check match
+        var matches = function(text) {
+            if (!filter) return true
+            return text && text.toLowerCase().indexOf(filter) !== -1
+        }
         
         // 1. Action: Connect new database
-        connectionsModel.append({
-            "id": -999,
-            "name": "Connect a new database",
-            "type": "action",
-            "dbType": "",
-            "icon": "+",
-            "color": ""
-        })
+        var newActionName = "Connect a new database"
+        var newActionDesc = "Configure a new connection"
+        if (matches(newActionName) || matches(newActionDesc)) {
+            connectionsModel.append({
+                "id": -999,
+                "name": newActionName,
+                "type": "action",
+                "dbType": "",
+                "icon": "+",
+                "color": ""
+            })
+        }
 
         // 2. Connections
         var conns = App.connections
-        // Sort? Currently usage order or alphabetical? 
-        // Let's just take them as is for now.
         for (var i = 0; i < conns.length; i++) {
             var item = conns[i]
-            connectionsModel.append({
-                "id": item.id,
-                "name": item.name,
-                "type": "connection",
-                "dbType": "PostgreSQL", // Fixed for now as requested
-                "icon": "",
-                "color": item.color
-            })
+            var dbType = "PostgreSQL" // Fixed for now as requested
+            
+            if (matches(item.name) || matches(dbType)) {
+                connectionsModel.append({
+                    "id": item.id,
+                    "name": item.name,
+                    "type": "connection",
+                    "dbType": dbType,
+                    "icon": "",
+                    "color": item.color
+                })
+            }
         }
         
         // 3. Action: Close Connection (if active)
         if (App.activeConnectionId !== -1) {
-            connectionsModel.append({
-                "id": -1,
-                "name": "Close Connection",
-                "type": "action",
-                "dbType": "",
-                "icon": "×",
-                "color": ""
-            })
+            var closeActionName = "Close Connection"
+            var closeActionDesc = "Disconnect from current database"
+            if (matches(closeActionName) || matches(closeActionDesc)) {
+                connectionsModel.append({
+                    "id": -1,
+                    "name": closeActionName,
+                    "type": "action",
+                    "dbType": "",
+                    "icon": "×",
+                    "color": ""
+                })
+            }
+        }
+        
+        // Reset index based on filter
+        if (connectionsList.count > 0) {
+             // Only select first item if filtering, otherwise no selection initially
+             if (filterText.length > 0) {
+                 connectionsList.currentIndex = 0
+             } else {
+                 connectionsList.currentIndex = -1
+             }
         }
     }
 
     onOpened: {
-        syncModel()
+        syncModel("")
         filterInput.text = ""
         filterInput.forceActiveFocus()
-        // Select first connection (or New Connection)
-        connectionsList.currentIndex = 0
+        // No initial selection
+        connectionsList.currentIndex = -1
     }
 
     ColumnLayout {
@@ -159,7 +186,7 @@ Popup {
                 }
                 
                 onTextChanged: {
-                    // TODO: Filter model
+                    root.syncModel(text)
                 }
                 
                 // Keyboard navigation for list
@@ -190,7 +217,7 @@ Popup {
                 width: connectionsList.width
                 height: 54
                 color: {
-                    if (ListView.isCurrentItem && model.id !== -999) return Theme.accent // Selected
+                    if (ListView.isCurrentItem) return Theme.surfaceHighlight // Subtle selection
                     if (hoverHandler.hovered) return Theme.surfaceHighlight // Hover
                     return "transparent"
                 }
