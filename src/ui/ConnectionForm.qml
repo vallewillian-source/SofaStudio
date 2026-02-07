@@ -139,7 +139,7 @@ Rectangle {
                     font.pixelSize: 11
                     font.bold: true
                     font.capitalization: Font.AllUppercase
-                    color: Theme.accent
+                    color: root.selectedColor
                 }
                 
                 // Driver + Name
@@ -163,7 +163,7 @@ Rectangle {
                                 implicitWidth: 120
                                 implicitHeight: Theme.buttonHeight
                                 color: Theme.surface
-                                border.color: parent.activeFocus ? Theme.accent : Theme.border
+                                border.color: parent.activeFocus ? root.selectedColor : Theme.border
                                 border.width: 1
                                 radius: Theme.radius
                             }
@@ -225,6 +225,7 @@ Rectangle {
                             id: nameField
                             Layout.fillWidth: true
                             placeholderText: "Ex: Production, Local..."
+                            accentColor: root.selectedColor
                         }
                     }
                 }
@@ -291,7 +292,7 @@ Rectangle {
                     font.pixelSize: 11
                     font.bold: true
                     font.capitalization: Font.AllUppercase
-                    color: Theme.accent
+                    color: root.selectedColor
                 }
                 
                 RowLayout {
@@ -306,6 +307,7 @@ Rectangle {
                             id: hostField
                             Layout.fillWidth: true
                             placeholderText: "localhost or IP"
+                            accentColor: root.selectedColor
                         }
                     }
                     
@@ -318,6 +320,7 @@ Rectangle {
                             Layout.fillWidth: true
                             text: "5432"
                             validator: IntValidator { bottom: 1; top: 65535 }
+                            accentColor: root.selectedColor
                         }
                     }
                 }
@@ -330,6 +333,7 @@ Rectangle {
                         id: dbField
                         Layout.fillWidth: true
                         placeholderText: "postgres"
+                        accentColor: root.selectedColor
                     }
                 }
             }
@@ -346,7 +350,7 @@ Rectangle {
                     font.pixelSize: 11
                     font.bold: true
                     font.capitalization: Font.AllUppercase
-                    color: Theme.accent
+                    color: root.selectedColor
                 }
                 
                 RowLayout {
@@ -361,6 +365,7 @@ Rectangle {
                             id: userField
                             Layout.fillWidth: true
                             placeholderText: "postgres"
+                            accentColor: root.selectedColor
                         }
                     }
                     
@@ -373,6 +378,7 @@ Rectangle {
                             Layout.fillWidth: true
                             echoMode: TextInput.Password
                             placeholderText: "Optional"
+                            accentColor: root.selectedColor
                         }
                     }
                 }
@@ -415,6 +421,7 @@ Rectangle {
                     AppButton {
                         text: "Test Connection"
                         Layout.preferredWidth: 140
+                        accentColor: root.selectedColor
                         onClicked: {
                             var data = {
                                 "host": hostField.text,
@@ -444,6 +451,7 @@ Rectangle {
                         text: "Save Connection"
                         isPrimary: true
                         textColor: Theme.background
+                        accentColor: root.selectedColor
                         onClicked: root.save()
                     }
                 }
