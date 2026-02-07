@@ -419,14 +419,19 @@ QVariantMap AppContext::runQuery(const QString& queryText)
     result["columns"] = columns;
     
     QVariantList rows;
+    QVariantList nulls;
     for (const auto& row : page.rows) {
         QVariantList rowList;
+        QVariantList nullRow;
         for (const auto& val : row) {
             rowList.append(val);
+            nullRow.append(val.isNull());
         }
         rows.append(QVariant(rowList));
+        nulls.append(QVariant(nullRow));
     }
     result["rows"] = rows;
+    result["nulls"] = nulls;
     
     setLastError("");
     return result;
@@ -538,14 +543,19 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
     }
     
     QVariantList rows;
+    QVariantList nulls;
     for (const auto& row : page.rows) {
         QVariantList r;
+        QVariantList nullRow;
         for (const auto& val : row) {
             r.append(val);
+            nullRow.append(val.isNull());
         }
         rows.append(QVariant(r));
+        nulls.append(QVariant(nullRow));
     }
     result["rows"] = rows;
+    result["nulls"] = nulls;
     result["hasMore"] = page.hasMore;
     
     if (m_logger) {

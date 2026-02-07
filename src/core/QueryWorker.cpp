@@ -28,14 +28,19 @@ QVariantMap QueryWorker::datasetToVariant(const DatasetPage& page)
     result["columns"] = columns;
 
     QVariantList rows;
+    QVariantList nulls;
     for (const auto& row : page.rows) {
         QVariantList rowList;
+        QVariantList nullRow;
         for (const auto& val : row) {
             rowList.append(val);
+            nullRow.append(val.isNull());
         }
         rows.append(QVariant(rowList));
+        nulls.append(QVariant(nullRow));
     }
     result["rows"] = rows;
+    result["nulls"] = nulls;
 
     return result;
 }

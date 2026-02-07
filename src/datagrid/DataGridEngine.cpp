@@ -2,6 +2,8 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
+#include <QJsonValue>
+#include <QDebug>
 
 namespace Sofa::DataGrid {
 
@@ -141,23 +143,51 @@ void DataGridEngine::loadFromVariant(const QVariantMap& data)
     qInfo() << "\x1b[36m📏 DataGrid Layout\x1b[0m Cols:" << schema.columns.size() << "TotalWidth:" << totalWidth();
     
     QVariantList rows = data["rows"].toList();
+    QVariantList nulls = data["nulls"].toList();
     qInfo() << "\x1b[35m🧪 DataGrid rows payload\x1b[0m total:" << rows.size();
     std::vector<std::vector<QVariant>> newRows;
     int rowIndex = 0;
     for (const auto& r : rows) {
         QVariantList rowList = r.toList();
+        QVariantList nullRowList;
+        if (rowIndex < nulls.size()) {
+            nullRowList = nulls[rowIndex].toList();
+        }
         std::vector<QVariant> newRow;
+        int colIndex = 0;
         for (const auto& val : rowList) {
-            newRow.push_back(val);
+            QVariant finalVal = val;
+            if (colIndex < nullRowList.size() && nullRowList[colIndex].toBool()) {
+                finalVal = QVariant();
+            } else if (val.userType() == QMetaType::QJsonValue) {
+                QJsonValue jv = val.toJsonValue();
+                if (jv.isNull() || jv.isUndefined()) {
+                    finalVal = QVariant();
+                } else {
+                    finalVal = jv.toVariant();
+                }
+            }
+            newRow.push_back(finalVal);
+            colIndex++;
         }
         newRows.push_back(newRow);
         
         if (rowIndex < 3) {
             QStringList debugVals;
             for (const auto& v : newRow) {
-                debugVals << (QString(v.typeName()) + ":" + v.toString());
+                QString valStr = v.toString();
+                QString display;
+                if (v.isNull()) display = "NULL";
+                else if (valStr.isEmpty()) display = "EMPTY";
+                else if (v.userType() == QMetaType::QString && valStr.trimmed().isEmpty()) display = "WHITESPACE";
+                else display = valStr;
+                QString suffix;
+                if (v.userType() == QMetaType::QString) {
+                    suffix = " len=" + QString::number(valStr.size());
+                }
+                debugVals << (QString(v.typeName()) + "(" + (v.isNull() ? "null" : "valid") + "):" + display + suffix);
             }
-            qInfo() << "\x1b[35m🧪 DataGrid row\x1b[0m" << rowIndex << "cols:" << rowList.size() << debugVals.join("|");
+            qInfo() << "\x1b[35m🧪 DataGrid row\x1b[0m" << rowIndex << "cols:" << rowList.size() << debugVals.join(" | ");
         }
         rowIndex++;
     }

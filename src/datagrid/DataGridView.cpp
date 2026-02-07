@@ -358,7 +358,20 @@ void DataGridView::paint(QPainter* painter)
                 painter->drawRect(cellRect);
                 
                 // Text
-                QString text = m_engine->getData(r, c).toString();
+                QVariant dataVal = m_engine->getData(r, c);
+                bool isNull = dataVal.isNull();
+                
+                // Extra check: if empty string and not a text column, treat as null
+                if (!isNull && dataVal.userType() == QMetaType::QString && dataVal.toString().isEmpty()) {
+                    auto col = m_engine->getColumn(c);
+                    // If it's not explicitly Text/Varchar/etc, assume empty means null for safety
+                    if (col.type != Sofa::Core::DataType::Text) {
+                        isNull = true;
+                    }
+                }
+                
+                QString text = isNull ? "NULL" : dataVal.toString();
+                
                 QColor cellTextColor = m_textColor;
                 
                 // If selected, force dark text for better contrast with the colored background
@@ -368,8 +381,12 @@ void DataGridView::paint(QPainter* painter)
                     QFont selectedFont = font;
                     selectedFont.setPixelSize(font.pixelSize() + 1);
                     painter->setFont(selectedFont);
+                    
+                    if (isNull) {
+                        cellTextColor.setAlphaF(0.5);
+                    }
                 } else {
-                    cellTextColor.setAlphaF(0.9);
+                    cellTextColor.setAlphaF(isNull ? 0.5 : 0.9);
                     painter->setFont(font);
                 }
                 

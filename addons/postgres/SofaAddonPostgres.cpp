@@ -233,8 +233,26 @@ DatasetPage PostgresQueryProvider::execute(const QString& queryStr, const Datase
         }
         
         std::vector<QVariant> row;
+        QStringList debugVals;
         for (int i = 0; i < record.count(); i++) {
-            row.push_back(q.value(i));
+            QVariant v = q.value(i);
+            row.push_back(v);
+            if (count < 3) {
+                QString valStr = v.toString();
+                QString display;
+                if (v.isNull()) display = "NULL";
+                else if (valStr.isEmpty()) display = "EMPTY";
+                else if (v.userType() == QMetaType::QString && valStr.trimmed().isEmpty()) display = "WHITESPACE";
+                else display = valStr;
+                QString suffix;
+                if (v.userType() == QMetaType::QString) {
+                    suffix = " len=" + QString::number(valStr.size());
+                }
+                debugVals << (QString(v.typeName()) + "(" + (v.isNull() ? "null" : "valid") + "):" + display + suffix);
+            }
+        }
+        if (count < 3) {
+            qInfo() << "\x1b[35m🧪 PG row\x1b[0m" << count << "cols:" << record.count() << debugVals.join(" | ");
         }
         page.rows.push_back(row);
         count++;
