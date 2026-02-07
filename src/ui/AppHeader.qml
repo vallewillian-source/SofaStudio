@@ -311,24 +311,88 @@ Rectangle {
             }
         }
         
-        AppButton {
-            text: "✎"
-            Layout.preferredHeight: 22
-            Layout.preferredWidth: 22
+        // Edit Connection Button
+        Button {
+            Layout.preferredHeight: 24
+            Layout.preferredWidth: 24
+            padding: 0
             visible: App.activeConnectionId !== -1
             onClicked: root.requestEditConnection(App.activeConnectionId)
-            ToolTip.visible: hovered
-            ToolTip.text: "Edit Connection"
+            
+            background: Rectangle {
+                radius: 4
+                color: parent.hovered ? Theme.surfaceHighlight : "transparent"
+            }
+            
+            contentItem: Text {
+                text: "✎"
+                color: parent.hovered ? Theme.textPrimary : Theme.textSecondary
+                font.pixelSize: 14
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            ToolTip {
+                visible: parent.hovered
+                text: "Edit Connection"
+                delay: 500
+                
+                contentItem: Text {
+                    text: "Edit Connection"
+                    font.pixelSize: 12
+                    color: Theme.textPrimary
+                }
+                
+                background: Rectangle {
+                    color: Theme.surfaceHighlight
+                    border.color: Theme.border
+                    border.width: 1
+                    radius: 4
+                }
+            }
         }
 
-        AppButton {
-            text: "✖"
-            Layout.preferredHeight: 22
-            Layout.preferredWidth: 22
+        // Delete Connection Button
+        Button {
+            Layout.preferredHeight: 24
+            Layout.preferredWidth: 24
+            padding: 0
             visible: App.activeConnectionId !== -1
             onClicked: root.requestDeleteConnection(App.activeConnectionId)
-            ToolTip.visible: hovered
-            ToolTip.text: "Delete Connection"
+            
+            background: Rectangle {
+                radius: 4
+                color: parent.hovered ? Theme.surfaceHighlight : "transparent"
+            }
+            
+            contentItem: Text {
+                text: "✕"
+                color: parent.hovered ? Theme.error : Theme.textSecondary
+                font.pixelSize: 14
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            ToolTip {
+                visible: parent.hovered
+                text: "Delete Connection"
+                delay: 500
+                
+                contentItem: Text {
+                    text: "Delete Connection"
+                    font.pixelSize: 12
+                    color: Theme.textPrimary
+                }
+                
+                background: Rectangle {
+                    color: Theme.surfaceHighlight
+                    border.color: Theme.border
+                    border.width: 1
+                    radius: 4
+                }
+            }
         }
         
         Item { Layout.fillWidth: true } // Spacer
