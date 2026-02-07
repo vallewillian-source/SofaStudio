@@ -3,6 +3,8 @@
 #include <vector>
 #include <memory>
 #include <QVariantMap>
+#include <QVariantList>
+#include <QString>
 #include "udm/UDM.h"
 
 namespace Sofa::DataGrid {
@@ -25,7 +27,9 @@ public:
     int rowCount() const;
     int columnCount() const;
     Sofa::Core::Column getColumn(int index) const;
-    QVariant getData(int row, int col) const;
+    Q_INVOKABLE QVariant getData(int row, int col) const;
+    Q_INVOKABLE QString getColumnName(int index) const;
+    Q_INVOKABLE QVariantList getRow(int row) const;
     
     // For View
     double totalWidth() const;

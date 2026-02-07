@@ -3,6 +3,8 @@
 #include <QStringList>
 #include <QJsonDocument>
 #include <QSet>
+#include <QtGui/QClipboard>
+#include <QtGui/QGuiApplication>
 #include "addons/IAddon.h"
 #include "udm/UDM.h"
 
@@ -53,6 +55,14 @@ void AppContext::executeCommand(const QString& id)
         m_commandService->execute(id);
     } else if (m_logger) {
         m_logger->error("CommandService is not available");
+    }
+}
+
+void AppContext::copyToClipboard(const QString& text)
+{
+    auto clipboard = QGuiApplication::clipboard();
+    if (clipboard) {
+        clipboard->setText(text);
     }
 }
 

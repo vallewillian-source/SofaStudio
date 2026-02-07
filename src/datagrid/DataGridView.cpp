@@ -15,7 +15,7 @@ DataGridView::DataGridView(QQuickItem* parent)
 {
     setFlag(ItemHasContents, true);
     setClip(true);
-    setAcceptedMouseButtons(Qt::LeftButton);
+    setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
     setAcceptHoverEvents(true);
     // Transparent background to let QML Theme.background show through
     setFillColor(Qt::transparent);
@@ -75,6 +75,43 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
     
     double x = event->position().x();
     double y = event->position().y();
+    
+    if (event->button() == Qt::RightButton) {
+        if (y < m_rowHeight) {
+            return;
+        }
+        
+        double absoluteY = y - m_rowHeight + m_contentY;
+        int row = static_cast<int>(floor(absoluteY / m_rowHeight));
+        
+        if (row < 0 || row >= m_engine->rowCount()) {
+            return;
+        }
+        
+        double absoluteX = x + m_contentX;
+        int col = -1;
+        double currentX = 0;
+        
+        for (int c = 0; c < m_engine->columnCount(); ++c) {
+            auto colInfo = m_engine->getColumn(c);
+            double w = colInfo.displayWidth;
+            if (absoluteX >= currentX && absoluteX < currentX + w) {
+                col = c;
+                break;
+            }
+            currentX += w;
+        }
+        
+        if (col != -1) {
+            if (m_selectedRow != row || m_selectedCol != col) {
+                m_selectedRow = row;
+                m_selectedCol = col;
+                update();
+            }
+            emit cellContextMenuRequested(row, col, x, y);
+        }
+        return;
+    }
     
     // Check if header clicked
     if (y < m_rowHeight) {

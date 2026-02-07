@@ -68,6 +68,7 @@ signals:
     void textColorChanged();
     
     void columnSettingsClicked(int index);
+    void cellContextMenuRequested(int row, int column, double x, double y);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;

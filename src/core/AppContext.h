@@ -67,6 +67,7 @@ public:
     // App State API
     Q_INVOKABLE void saveAppState(const QVariantMap& state);
     Q_INVOKABLE QVariantMap loadAppState();
+    Q_INVOKABLE void copyToClipboard(const QString& text);
 
 signals:
     void connectionsChanged();

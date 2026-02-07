@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import sofa.ui
 import sofa.datagrid 1.0
@@ -15,9 +16,95 @@ Rectangle {
     property bool canPrevious: false
     property bool canNext: false
     property color addRowAccentColor: Theme.accent
+    property string schemaName: ""
+    property string tableName: ""
+    property int contextRow: -1
+    property int contextCol: -1
+    property string toastText: ""
+    property bool toastVisible: false
     signal addRowClicked()
     signal previousClicked()
     signal nextClicked()
+    
+    function showToast(message) {
+        toastText = message
+        toastVisible = true
+        toastTimer.restart()
+    }
+    
+    function copyAndToast(text) {
+        App.copyToClipboard(text)
+        showToast("Copiado para a área de trabalho")
+    }
+    
+    function columnNames() {
+        var cols = []
+        if (!view.engine) return cols
+        var count = view.engine.columnCount
+        for (var i = 0; i < count; i++) {
+            cols.push(view.engine.getColumnName(i))
+        }
+        return cols
+    }
+    
+    function rowValues() {
+        if (!view.engine) return []
+        return view.engine.getRow(contextRow)
+    }
+    
+    function sqlValue(value) {
+        if (value === null || value === undefined) return "NULL"
+        if (typeof value === "number") return value.toString()
+        if (typeof value === "boolean") return value ? "TRUE" : "FALSE"
+        var text = String(value)
+        text = text.replace(/'/g, "''")
+        return "'" + text + "'"
+    }
+    
+    function markdownCell(value) {
+        if (value === null || value === undefined) return ""
+        var text = String(value)
+        text = text.replace(/\|/g, "\\|")
+        text = text.replace(/\n/g, " ")
+        return text
+    }
+    
+    function rowAsJson() {
+        var cols = columnNames()
+        var row = rowValues()
+        var obj = {}
+        for (var i = 0; i < cols.length; i++) {
+            obj[cols[i]] = row[i]
+        }
+        return JSON.stringify(obj, null, 2)
+    }
+    
+    function rowAsSql() {
+        var cols = columnNames()
+        var row = rowValues()
+        var baseTable = tableName.length > 0 ? tableName : "table"
+        var fullName = schemaName.length > 0 ? schemaName + "." + baseTable : baseTable
+        var colSql = cols.map((c) => "\"" + String(c).replace(/"/g, "\"\"") + "\"").join(", ")
+        var valSql = row.map(sqlValue).join(", ")
+        return "INSERT INTO " + fullName + " (" + colSql + ") VALUES (" + valSql + ");"
+    }
+    
+    function rowAsMarkdown() {
+        var cols = columnNames()
+        var row = rowValues()
+        if (cols.length === 0) return ""
+        var header = "| " + cols.map(markdownCell).join(" | ") + " |"
+        var sep = "| " + cols.map(() => "---").join(" | ") + " |"
+        var line = "| " + row.map(markdownCell).join(" | ") + " |"
+        return header + "\n" + sep + "\n" + line
+    }
+    
+    Timer {
+        id: toastTimer
+        interval: 2000
+        repeat: false
+        onTriggered: toastVisible = false
+    }
     
     ColumnLayout {
         anchors.fill: parent
@@ -83,6 +170,52 @@ Rectangle {
                 // Bind scrollbars
                 contentY: vScroll.position * view.totalHeight
                 contentX: hScroll.position * view.totalWidth
+                
+                onCellContextMenuRequested: (row, col, x, y) => {
+                    contextRow = row
+                    contextCol = col
+                    contextMenu.popup(view, x, y)
+                }
+            }
+            
+            AppMenu {
+                id: contextMenu
+                
+                Controls.MenuItem {
+                    text: "Copy"
+                    enabled: contextRow !== -1 && contextCol !== -1
+                    onTriggered: {
+                        var value = view.engine ? view.engine.getData(contextRow, contextCol) : ""
+                        copyAndToast(String(value))
+                    }
+                }
+                
+                Controls.MenuItem {
+                    text: "Copy Column Name"
+                    enabled: contextRow !== -1 && contextCol !== -1
+                    onTriggered: {
+                        var name = view.engine ? view.engine.getColumnName(contextCol) : ""
+                        copyAndToast(String(name))
+                    }
+                }
+                
+                Controls.MenuItem {
+                    text: "Copy Row as JSON"
+                    enabled: contextRow !== -1 && contextCol !== -1
+                    onTriggered: copyAndToast(rowAsJson())
+                }
+                
+                Controls.MenuItem {
+                    text: "Copy Row as SQL"
+                    enabled: contextRow !== -1 && contextCol !== -1
+                    onTriggered: copyAndToast(rowAsSql())
+                }
+                
+                Controls.MenuItem {
+                    text: "Copy Row as Markdown"
+                    enabled: contextRow !== -1 && contextCol !== -1
+                    onTriggered: copyAndToast(rowAsMarkdown())
+                }
             }
             
             ScrollBar {
@@ -139,6 +272,30 @@ Rectangle {
                         if (view.totalWidth > 0)
                             hScroll.position = view.contentX / view.totalWidth
                     }
+                }
+            }
+            
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.rightMargin: Theme.spacingLarge
+                anchors.bottomMargin: Theme.spacingLarge
+                color: Theme.surfaceHighlight
+                border.color: Theme.border
+                border.width: 1
+                radius: Theme.radius
+                visible: toastVisible
+                z: 10
+                
+                Text {
+                    text: toastText
+                    color: Theme.textPrimary
+                    font.pixelSize: 12
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.margins: Theme.spacingMedium
                 }
             }
         }

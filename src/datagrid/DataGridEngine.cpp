@@ -61,6 +61,26 @@ QVariant DataGridEngine::getData(int row, int col) const
     return QVariant();
 }
 
+QString DataGridEngine::getColumnName(int index) const
+{
+    if (index >= 0 && index < m_schema.columns.size()) {
+        return m_schema.columns[index].name;
+    }
+    return QString();
+}
+
+QVariantList DataGridEngine::getRow(int row) const
+{
+    QVariantList list;
+    if (row >= 0 && row < m_rows.size()) {
+        const auto& r = m_rows[row];
+        for (const auto& val : r) {
+            list.append(val);
+        }
+    }
+    return list;
+}
+
 double DataGridEngine::totalWidth() const
 {
     double w = 0;

@@ -725,6 +725,8 @@ ApplicationWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 engine: gridEngine
+                schemaName: tableRoot.schema
+                tableName: tableRoot.tableName
                 visible: !tableRoot.loading && !tableRoot.empty && tableRoot.errorMessage.length === 0
                 currentPage: tableRoot.pageIndex + 1
                 pageSize: tableRoot.pageSize
