@@ -97,6 +97,9 @@ private:
     // Header Interaction
     int m_hoveredHeaderColumn = -1;
     QSvgRenderer* m_gearIcon = nullptr;
+
+    // Gutter
+    double m_gutterWidth = 50;
 };
 
 }

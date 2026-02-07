@@ -32,7 +32,15 @@ void DataGridView::hoverMoveEvent(QHoverEvent* event)
 
     // Check if over header
     if (y < m_rowHeight) {
-        double absoluteX = x + m_contentX;
+        if (x < m_gutterWidth) {
+            if (m_hoveredHeaderColumn != -1) {
+                m_hoveredHeaderColumn = -1;
+                update();
+            }
+            return;
+        }
+
+        double absoluteX = (x - m_gutterWidth) + m_contentX;
         int col = -1;
         double currentX = 0;
         
@@ -87,8 +95,10 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
         if (row < 0 || row >= m_engine->rowCount()) {
             return;
         }
+
+        if (x < m_gutterWidth) return;
         
-        double absoluteX = x + m_contentX;
+        double absoluteX = (x - m_gutterWidth) + m_contentX;
         int col = -1;
         double currentX = 0;
         
@@ -115,8 +125,10 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
     
     // Check if header clicked
     if (y < m_rowHeight) {
+        if (x < m_gutterWidth) return;
+
         // Calculate Col
-        double absoluteX = x + m_contentX;
+        double absoluteX = (x - m_gutterWidth) + m_contentX;
         int col = -1;
         double currentX = 0;
         
@@ -162,7 +174,9 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
     }
     
     // Calculate Col
-    double absoluteX = x + m_contentX;
+    if (x < m_gutterWidth) return;
+
+    double absoluteX = (x - m_gutterWidth) + m_contentX;
     int col = -1;
     double currentX = 0;
     
@@ -294,7 +308,7 @@ double DataGridView::totalHeight() const
 double DataGridView::totalWidth() const
 {
     if (!m_engine) return 0;
-    return m_engine->totalWidth();
+    return m_engine->totalWidth() + m_gutterWidth;
 }
 
 void DataGridView::paint(QPainter* painter)
@@ -313,8 +327,8 @@ void DataGridView::paint(QPainter* painter)
     if (endRow > m_engine->rowCount()) endRow = m_engine->rowCount();
     
     painter->save();
-    // Clip data area (below header)
-    painter->setClipRect(0, m_rowHeight, w, h - m_rowHeight);
+    // Clip data area (below header, right of gutter)
+    painter->setClipRect(m_gutterWidth, m_rowHeight, w - m_gutterWidth, h - m_rowHeight);
     
     double currentY = (startRow * m_rowHeight) - m_contentY + m_rowHeight;
     
@@ -323,7 +337,7 @@ void DataGridView::paint(QPainter* painter)
     painter->setFont(font);
     
     for (int r = startRow; r < endRow; ++r) {
-        double currentX = -m_contentX;
+        double currentX = m_gutterWidth - m_contentX;
         
         for (int c = 0; c < cols; ++c) {
             auto col = m_engine->getColumn(c);
@@ -331,7 +345,7 @@ void DataGridView::paint(QPainter* painter)
             double colW = col.displayWidth;
             
             // Optimization: skip if col is out of view
-            if (currentX + colW > 0 && currentX < w) {
+            if (currentX + colW > m_gutterWidth && currentX < w) {
                 // Draw Cell
                 QRectF cellRect(currentX, currentY, colW, m_rowHeight);
                 
@@ -400,17 +414,47 @@ void DataGridView::paint(QPainter* painter)
     
     painter->restore();
     
-    // Draw Header (Sticky)
-    // Background
-    painter->fillRect(0, 0, w, m_rowHeight, m_headerColor);
+    // Draw Gutter (Row Numbers)
+    painter->save();
+    painter->setClipRect(0, m_rowHeight, m_gutterWidth, h - m_rowHeight);
     
-    double currentX = -m_contentX;
+    // Gutter Background
+    painter->fillRect(0, m_rowHeight, m_gutterWidth, h - m_rowHeight, m_headerColor);
+    
+    // Reset font for numbers
+    painter->setFont(font);
+    
+    currentY = (startRow * m_rowHeight) - m_contentY + m_rowHeight;
+    
+    for (int r = startRow; r < endRow; ++r) {
+        QRectF numRect(0, currentY, m_gutterWidth, m_rowHeight);
+        
+        // Border
+        painter->setPen(m_lineColor);
+        painter->drawRect(numRect); // Draw box for consistency with header
+        
+        // Text
+        painter->setPen(m_textColor);
+        painter->drawText(numRect, Qt::AlignCenter, QString::number(r + 1));
+        
+        currentY += m_rowHeight;
+    }
+    painter->restore();
+
+    // Draw Header (Sticky)
+    painter->save();
+    painter->setClipRect(m_gutterWidth, 0, w - m_gutterWidth, m_rowHeight);
+    
+    // Background
+    painter->fillRect(m_gutterWidth, 0, w - m_gutterWidth, m_rowHeight, m_headerColor);
+    
+    double currentX = m_gutterWidth - m_contentX;
     for (int c = 0; c < cols; ++c) {
         auto col = m_engine->getColumn(c);
         
         double colW = col.displayWidth;
         
-        if (currentX + colW > 0 && currentX < w) {
+        if (currentX + colW > m_gutterWidth && currentX < w) {
             QRectF cellRect(currentX, 0, colW, m_rowHeight);
             
             // Border
@@ -419,8 +463,9 @@ void DataGridView::paint(QPainter* painter)
             
             // Text
             painter->setPen(m_textColor);
-            font.setBold(true);
-            painter->setFont(font);
+            QFont headerFont = font;
+            headerFont.setBold(true);
+            painter->setFont(headerFont);
             
             QString headerText = col.name;
             // Adjust text rect to avoid icon if present
@@ -448,6 +493,13 @@ void DataGridView::paint(QPainter* painter)
         }
         currentX += colW;
     }
+    painter->restore();
+    
+    // Draw Corner (Top-Left)
+    QRectF cornerRect(0, 0, m_gutterWidth, m_rowHeight);
+    painter->fillRect(cornerRect, m_headerColor);
+    painter->setPen(m_lineColor);
+    painter->drawRect(cornerRect);
 }
 
 }
