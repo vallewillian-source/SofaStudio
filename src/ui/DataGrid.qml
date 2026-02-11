@@ -36,6 +36,23 @@ Rectangle {
         App.copyToClipboard(text)
         showToast("Copiado para a área de trabalho")
     }
+
+    function maxScrollX() {
+        return Math.max(0, view.totalWidth - view.width)
+    }
+
+    function maxScrollY() {
+        return Math.max(0, view.totalHeight - view.height)
+    }
+
+    function syncScrollBarsFromView() {
+        var maxX = maxScrollX()
+        var maxY = maxScrollY()
+        var hRange = Math.max(0, 1 - hScroll.size)
+        var vRange = Math.max(0, 1 - vScroll.size)
+        hScroll.position = (maxX > 0 && hRange > 0) ? (view.contentX / maxX) * hRange : 0
+        vScroll.position = (maxY > 0 && vRange > 0) ? (view.contentY / maxY) * vRange : 0
+    }
     
     function columnNames() {
         var cols = []
@@ -183,10 +200,6 @@ Rectangle {
                     return activeColor
                 }
                 
-                // Bind scrollbars
-                contentY: vScroll.position * view.totalHeight
-                contentX: hScroll.position * view.totalWidth
-                
                 onCellContextMenuRequested: (row, col, x, y) => {
                     contextRow = row
                     contextCol = col
@@ -205,6 +218,17 @@ Rectangle {
                 onRowResized: (row, height) => {
                     showToast("Linha " + (row + 1) + ": " + Math.round(height) + " px")
                 }
+            }
+
+            Connections {
+                target: view
+
+                function onContentXChanged() { root.syncScrollBarsFromView() }
+                function onContentYChanged() { root.syncScrollBarsFromView() }
+                function onTotalWidthChanged() { root.syncScrollBarsFromView() }
+                function onTotalHeightChanged() { root.syncScrollBarsFromView() }
+                function onWidthChanged() { root.syncScrollBarsFromView() }
+                function onHeightChanged() { root.syncScrollBarsFromView() }
             }
             
             AppMenu {
@@ -253,12 +277,15 @@ Rectangle {
                 anchors.top: parent.top
                 anchors.bottom: hScroll.top
                 active: true
+                visible: root.maxScrollY() > 0
                 orientation: Qt.Vertical
                 size: view.height / Math.max(view.height, view.totalHeight)
                 
                 onPositionChanged: {
                     if (pressed) {
-                        view.contentY = position * view.totalHeight
+                        var maxY = root.maxScrollY()
+                        var vRange = Math.max(0, 1 - size)
+                        view.contentY = (maxY > 0 && vRange > 0) ? (position / vRange) * maxY : 0
                     }
                 }
             }
@@ -269,12 +296,15 @@ Rectangle {
                 anchors.right: vScroll.left
                 anchors.bottom: parent.bottom
                 active: true
+                visible: root.maxScrollX() > 0
                 orientation: Qt.Horizontal
                 size: view.width / Math.max(view.width, view.totalWidth)
                 
                 onPositionChanged: {
                     if (pressed) {
-                        view.contentX = position * view.totalWidth
+                        var maxX = root.maxScrollX()
+                        var hRange = Math.max(0, 1 - size)
+                        view.contentX = (maxX > 0 && hRange > 0) ? (position / hRange) * maxX : 0
                     }
                 }
             }
@@ -288,16 +318,18 @@ Rectangle {
                         if (newY > view.totalHeight - view.height) newY = view.totalHeight - view.height
                         view.contentY = newY
                         // Sync ScrollBar
-                        if (view.totalHeight > 0)
-                            vScroll.position = view.contentY / view.totalHeight
+                        var maxY = root.maxScrollY()
+                        var vRange = Math.max(0, 1 - vScroll.size)
+                        vScroll.position = (maxY > 0 && vRange > 0) ? (view.contentY / maxY) * vRange : 0
                     }
                     if (wheel.angleDelta.x !== 0) {
                         var newX = view.contentX - wheel.angleDelta.x
                         if (newX < 0) newX = 0
                         if (newX > view.totalWidth - view.width) newX = view.totalWidth - view.width
                         view.contentX = newX
-                        if (view.totalWidth > 0)
-                            hScroll.position = view.contentX / view.totalWidth
+                        var maxX = root.maxScrollX()
+                        var hRange = Math.max(0, 1 - hScroll.size)
+                        hScroll.position = (maxX > 0 && hRange > 0) ? (view.contentX / maxX) * hRange : 0
                     }
 
                     wheel.accepted = true
