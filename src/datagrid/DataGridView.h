@@ -2,6 +2,7 @@
 #include <QQuickPaintedItem>
 #include <QPainter>
 #include <QSvgRenderer>
+#include <QRectF>
 #include "DataGridEngine.h"
 
 namespace Sofa::DataGrid {
@@ -19,6 +20,7 @@ class DataGridView : public QQuickPaintedItem {
     Q_PROPERTY(QColor selectionColor READ selectionColor WRITE setSelectionColor NOTIFY selectionColorChanged)
     Q_PROPERTY(QColor gridLineColor READ gridLineColor WRITE setGridLineColor NOTIFY gridLineColorChanged)
     Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor NOTIFY textColorChanged)
+    Q_PROPERTY(QColor resizeGuideColor READ resizeGuideColor WRITE setResizeGuideColor NOTIFY resizeGuideColorChanged)
 
 public:
     explicit DataGridView(QQuickItem* parent = nullptr);
@@ -50,6 +52,9 @@ public:
     QColor textColor() const { return m_textColor; }
     void setTextColor(const QColor& c);
 
+    QColor resizeGuideColor() const { return m_resizeGuideColor; }
+    void setResizeGuideColor(const QColor& c);
+
     double totalHeight() const;
     double totalWidth() const;
     
@@ -66,19 +71,38 @@ signals:
     void selectionColorChanged();
     void gridLineColorChanged();
     void textColorChanged();
+    void resizeGuideColorChanged();
     
     void columnSettingsClicked(int index);
     void cellContextMenuRequested(int row, int column, double x, double y);
+    void columnResized(int index, int width);
+    void rowHeightResized(double height);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void hoverMoveEvent(QHoverEvent* event) override;
     void hoverLeaveEvent(QHoverEvent* event) override;
+    void geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) override;
     
 private slots:
     void onEngineUpdated();
 
 private:
+    int columnAtPosition(double x) const;
+    int columnResizeHandleAt(double x, double y) const;
+    bool rowResizeHandleAt(double x, double y) const;
+    double columnRightX(int column) const;
+    int autoFitColumnWidth(int column) const;
+    QString cellDisplayText(int row, int column) const;
+    double maxContentX() const;
+    double maxContentY() const;
+    void clampScrollOffsets();
+    void updateHoverState(double x, double y);
+    void refreshCursor();
+
     DataGridEngine* m_engine = nullptr;
     double m_contentY = 0;
     double m_contentX = 0;
@@ -89,6 +113,7 @@ private:
     QColor m_alternateRowColor;
     QColor m_selectionColor;
     QColor m_textColor;
+    QColor m_resizeGuideColor;
     
     // Selection
     int m_selectedRow = -1;
@@ -96,10 +121,30 @@ private:
     
     // Header Interaction
     int m_hoveredHeaderColumn = -1;
+    int m_hoveredResizeColumn = -1;
+    bool m_hoveredRowResizeHandle = false;
     QSvgRenderer* m_gearIcon = nullptr;
+
+    // Resize Interaction
+    int m_resizingColumn = -1;
+    double m_resizeStartX = 0;
+    int m_resizeInitialWidth = 0;
+    bool m_resizingRowHeight = false;
+    double m_rowResizeStartY = 0;
+    double m_rowResizeInitialHeight = 30;
 
     // Gutter
     double m_gutterWidth = 50;
+
+    // UX Constraints
+    int m_columnResizeHitArea = 5;
+    int m_minColumnWidth = 72;
+    int m_maxColumnWidth = 900;
+    double m_rowResizeHitArea = 4.0;
+    double m_minRowHeight = 24;
+    double m_maxRowHeight = 72;
+    double m_defaultRowHeight = 30;
+    int m_autoFitSampleLimit = 500;
 };
 
 }

@@ -4,6 +4,7 @@
 #include <QVariantList>
 #include <QJsonValue>
 #include <QDebug>
+#include <algorithm>
 
 namespace Sofa::DataGrid {
 
@@ -50,6 +51,29 @@ Sofa::Core::Column DataGridEngine::getColumn(int index) const
         return m_schema.columns[index];
     }
     return Sofa::Core::Column();
+}
+
+int DataGridEngine::columnDisplayWidth(int index) const
+{
+    if (index >= 0 && index < m_schema.columns.size()) {
+        return m_schema.columns[index].displayWidth;
+    }
+    return 0;
+}
+
+void DataGridEngine::setColumnDisplayWidth(int index, int width)
+{
+    if (index < 0 || index >= m_schema.columns.size()) {
+        return;
+    }
+
+    const int clampedWidth = std::max(1, width);
+    if (m_schema.columns[index].displayWidth == clampedWidth) {
+        return;
+    }
+
+    m_schema.columns[index].displayWidth = clampedWidth;
+    emit layoutChanged();
 }
 
 QVariant DataGridEngine::getData(int row, int col) const

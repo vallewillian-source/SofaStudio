@@ -27,6 +27,8 @@ public:
     int rowCount() const;
     int columnCount() const;
     Sofa::Core::Column getColumn(int index) const;
+    int columnDisplayWidth(int index) const;
+    void setColumnDisplayWidth(int index, int width);
     Q_INVOKABLE QVariant getData(int row, int col) const;
     Q_INVOKABLE QString getColumnName(int index) const;
     Q_INVOKABLE QVariantList getRow(int row) const;

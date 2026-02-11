@@ -166,6 +166,7 @@ Rectangle {
 
                 gridLineColor: "transparent"
                 textColor: Theme.textPrimary
+                resizeGuideColor: Theme.accent
                 
                 // Bind scrollbars
                 contentY: vScroll.position * view.totalHeight
@@ -175,6 +176,15 @@ Rectangle {
                     contextRow = row
                     contextCol = col
                     contextMenu.popup(view, x, y)
+                }
+
+                onColumnResized: (index, width) => {
+                    var name = view.engine ? view.engine.getColumnName(index) : ("Column " + (index + 1))
+                    showToast("Coluna \"" + name + "\": " + width + " px")
+                }
+
+                onRowHeightResized: (height) => {
+                    showToast("Altura das linhas: " + Math.round(height) + " px")
                 }
             }
             

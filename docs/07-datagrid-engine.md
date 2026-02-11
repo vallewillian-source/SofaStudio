@@ -34,6 +34,8 @@ A `QQuickPaintedItem` subclass. This is where the pixels are drawn.
 *   **Input Handling**:
     *   Handles mouse clicks for cell selection.
     *   Calculates row/column from X/Y coordinates.
+    *   Handles column width resize (drag on header separators) with live feedback and double-click auto-fit.
+    *   Handles row height resize (drag on row-header separator) with live feedback and double-click reset.
 
 ### 3. QML Integration (`DataGrid.qml`)
 **File:** [DataGrid.qml](src/ui/DataGrid.qml)
@@ -46,3 +48,4 @@ Combines the C++ Renderer with QML controls.
 
 *   **Virtualization**: Only draws what is visible. Can handle 100k+ rows (memory permitting) with smooth scrolling.
 *   **Type Aware**: Renders different types differently (e.g., right-align numbers, special formatting for dates).
+*   **Interactive Layout**: Column widths and row height can be resized directly in the grid with proper hit areas, cursor changes, and constraints.
