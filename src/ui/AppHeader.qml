@@ -98,7 +98,10 @@ Rectangle {
         onNewConnectionRequested: root.requestNewConnection()
         onConnectionSelected: (id) => {
             errorModal.connectionId = id
-            App.openConnection(id)
+            var ok = App.openConnection(id)
+            if (!ok && App.lastError.length > 0) {
+                errorModal.open()
+            }
         }
     }
 
@@ -107,15 +110,6 @@ Rectangle {
         errorMessage: App.lastError
         onEditRequested: (id) => root.requestEditConnection(id)
         onClosed: App.clearLastError()
-    }
-
-    Connections {
-        target: App
-        function onLastErrorChanged() {
-            if (App.lastError.length > 0) {
-                errorModal.open()
-            }
-        }
     }
 
     MouseArea {

@@ -534,6 +534,8 @@ ApplicationWindow {
             property int pageIndex: 0
             property bool hasMore: false
             property bool pendingLoad: false
+            property string insertRequestTag: ""
+            property bool insertRunning: false
             
             // Helper to get active connection color
             function getActiveConnectionColor() {
@@ -547,6 +549,58 @@ ApplicationWindow {
                     }
                 }
                 return Theme.accent
+            }
+
+            function quoteIdentifier(name) {
+                return "\"" + String(name).replace(/"/g, "\"\"") + "\""
+            }
+
+            function addRowColumns() {
+                var cols = []
+                if (!gridEngine) return cols
+                var count = gridEngine.columnCount
+                for (var i = 0; i < count; i++) {
+                    cols.push(gridEngine.getColumnName(i))
+                }
+                return cols
+            }
+
+            function openAddRowModal() {
+                var cols = addRowColumns()
+                if (cols.length === 0) return
+                rowEditorModal.openForAdd(tableRoot.schema, tableRoot.tableName, cols)
+            }
+
+            function buildInsertSql(entries) {
+                var quotedCols = []
+                var quotedVals = []
+                for (var i = 0; i < entries.length; i++) {
+                    var rawValue = entries[i].value
+                    if (rawValue === null || rawValue === undefined) {
+                        continue
+                    }
+
+                    var text = String(rawValue)
+                    var trimmed = text.trim()
+                    if (trimmed.length === 0) {
+                        // Empty input means: let DB default apply.
+                        continue
+                    }
+
+                    quotedCols.push(quoteIdentifier(entries[i].name))
+                    if (trimmed.toUpperCase() === "NULL") {
+                        // Explicit NULL token.
+                        quotedVals.push("NULL")
+                    } else {
+                        quotedVals.push("'" + text.replace(/'/g, "''") + "'")
+                    }
+                }
+
+                var target = quoteIdentifier(tableRoot.schema) + "." + quoteIdentifier(tableRoot.tableName)
+                if (quotedCols.length === 0) {
+                    return "INSERT INTO " + target + " DEFAULT VALUES;"
+                }
+                return "INSERT INTO " + target + " (" + quotedCols.join(", ") + ") VALUES (" + quotedVals.join(", ") + ");"
             }
 
             color: Theme.background
@@ -727,7 +781,7 @@ ApplicationWindow {
                 engine: gridEngine
                 schemaName: tableRoot.schema
                 tableName: tableRoot.tableName
-                visible: !tableRoot.loading && !tableRoot.empty && tableRoot.errorMessage.length === 0
+                visible: !tableRoot.loading && tableRoot.errorMessage.length === 0
                 currentPage: tableRoot.pageIndex + 1
                 pageSize: tableRoot.pageSize
                 canPrevious: tableRoot.pageIndex > 0 && !tableRoot.loading
@@ -735,7 +789,26 @@ ApplicationWindow {
                 addRowAccentColor: tableRoot.getActiveConnectionColor()
                 onPreviousClicked: tableRoot.previousPage()
                 onNextClicked: tableRoot.nextPage()
-                onAddRowClicked: console.log("Add row clicked")
+                onAddRowClicked: tableRoot.openAddRowModal()
+            }
+
+            RowEditorModal {
+                id: rowEditorModal
+                onSubmitRequested: (entries) => {
+                    if (tableRoot.insertRunning) return
+                    if (!entries || entries.length === 0) return
+
+                    errorMessage = ""
+                    submitting = true
+                    tableRoot.insertRequestTag = "insert:" + tableRoot.schema + "." + tableRoot.tableName + ":" + Date.now()
+
+                    var insertSql = tableRoot.buildInsertSql(entries)
+                    var ok = App.runQueryAsync(insertSql, tableRoot.insertRequestTag)
+                    if (!ok) {
+                        submitting = false
+                        errorMessage = App.lastError.length > 0 ? App.lastError : "Falha ao executar INSERT."
+                    }
+                }
             }
             
             // ViewEditor removed
@@ -745,7 +818,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 anchors.topMargin: toolbar.height
                 color: Theme.background
-                visible: tableRoot.loading || tableRoot.empty || tableRoot.errorMessage.length > 0
+                visible: tableRoot.loading || tableRoot.errorMessage.length > 0
                 z: 5
                 
                 ColumnLayout {
@@ -915,6 +988,36 @@ ApplicationWindow {
                     tableRoot.errorMessage = "Query cancelada."
                     tableRoot.hasMore = false
                     gridEngine.clear()
+                }
+
+                function onSqlStarted(tag) {
+                    if (tag !== tableRoot.insertRequestTag) return;
+                    tableRoot.insertRunning = true
+                    rowEditorModal.submitting = true
+                    rowEditorModal.errorMessage = ""
+                }
+
+                function onSqlFinished(tag, result) {
+                    if (tag !== tableRoot.insertRequestTag) return;
+                    tableRoot.insertRunning = false
+                    rowEditorModal.submitting = false
+                    rowEditorModal.errorMessage = ""
+                    rowEditorModal.close()
+                    tableRoot.loadData()
+                }
+
+                function onSqlError(tag, error) {
+                    if (tag !== tableRoot.insertRequestTag) return;
+                    tableRoot.insertRunning = false
+                    rowEditorModal.submitting = false
+                    rowEditorModal.errorMessage = error
+                }
+
+                function onSqlCanceled(tag) {
+                    if (tag !== tableRoot.insertRequestTag) return;
+                    tableRoot.insertRunning = false
+                    rowEditorModal.submitting = false
+                    rowEditorModal.errorMessage = "INSERT cancelado."
                 }
 
                 function onCountFinished(tag, total) {

@@ -29,6 +29,7 @@ qt_add_qml_module(SofaUI
         SqlConsole.qml
         ConnectionSelectorModal.qml
         ConnectionErrorModal.qml
+        RowEditorModal.qml
     RESOURCES
         assets/table-list-solid-full.svg
         assets/table-cells-large-solid-full.svg
