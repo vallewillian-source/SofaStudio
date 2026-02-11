@@ -53,7 +53,7 @@ public:
     Q_INVOKABLE void closeConnection();
     Q_INVOKABLE QStringList getSchemas();
     Q_INVOKABLE QStringList getHiddenSchemas();
-    Q_INVOKABLE QStringList getTables(const QString& schema);
+    Q_INVOKABLE QVariantList getTables(const QString& schema);
     
     // Query API
     Q_INVOKABLE QVariantMap runQuery(const QString& queryText);

@@ -128,6 +128,7 @@ void DataGridEngine::loadFromVariant(const QVariantMap& data)
         Sofa::Core::Column col;
         col.name = map["name"].toString();
         col.rawType = map["type"].toString();
+        col.isPrimaryKey = map["isPrimaryKey"].toBool();
         QString raw = col.rawType.toLower();
         
         // Heuristic for column width based on type and name

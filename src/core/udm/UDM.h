@@ -32,6 +32,11 @@ struct TableSchema {
     std::vector<Column> columns;
 };
 
+struct CatalogTable {
+    QString name;
+    bool hasPrimaryKey = false;
+};
+
 struct DatasetRequest {
     QString cursor; // specific implementation dependent
     int limit = 100;

@@ -356,16 +356,19 @@ QStringList AppContext::getHiddenSchemas()
     return list;
 }
 
-QStringList AppContext::getTables(const QString& schema)
+QVariantList AppContext::getTables(const QString& schema)
 {
-    QStringList list;
+    QVariantList list;
     if (!m_currentConnection || !m_currentConnection->isOpen()) return list;
     
     auto catalog = m_currentConnection->catalog();
     if (catalog) {
         auto tables = catalog->listTables(schema);
         for (const auto& t : tables) {
-            list.append(t);
+            QVariantMap table;
+            table["name"] = t.name;
+            table["hasPrimaryKey"] = t.hasPrimaryKey;
+            list.append(table);
         }
     }
     return list;
@@ -414,6 +417,7 @@ QVariantMap AppContext::runQuery(const QString& queryText)
         QVariantMap colMap;
         colMap["name"] = col.name;
         colMap["type"] = col.rawType;
+        colMap["isPrimaryKey"] = col.isPrimaryKey;
         columns.append(colMap);
     }
     result["columns"] = columns;
@@ -531,6 +535,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         QVariantMap c;
         c["name"] = col.name;
         c["type"] = col.rawType;
+        c["isPrimaryKey"] = col.isPrimaryKey;
         columns.append(c);
     }
     result["columns"] = columns;

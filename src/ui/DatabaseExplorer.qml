@@ -66,7 +66,18 @@ Rectangle {
             var tables = App.getTables(item.name)
             var rows = []
             for (var i = 0; i < tables.length; i++) {
-                rows.push({"name": tables[i]})
+                var tableData = tables[i]
+                if (typeof tableData === "string") {
+                    rows.push({
+                        "name": tableData,
+                        "hasPrimaryKey": false
+                    })
+                } else {
+                    rows.push({
+                        "name": tableData.name || "",
+                        "hasPrimaryKey": !!tableData.hasPrimaryKey
+                    })
+                }
             }
             item.tables = rows
             item.expanded = true

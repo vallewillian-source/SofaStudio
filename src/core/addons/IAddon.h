@@ -23,7 +23,7 @@ public:
     virtual ~ICatalogProvider() = default;
     virtual std::vector<QString> listSchemas() = 0;
     virtual std::vector<QString> listHiddenSchemas() { return {}; }
-    virtual std::vector<QString> listTables(const QString& schema) = 0;
+    virtual std::vector<CatalogTable> listTables(const QString& schema) = 0;
     virtual TableSchema getTableSchema(const QString& schema, const QString& table) = 0;
 };
 

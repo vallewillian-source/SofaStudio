@@ -5,6 +5,7 @@
 #include <QSqlField>
 #include <QDebug>
 #include <QDateTime>
+#include <QSet>
 
 namespace Sofa::Addons::Postgres {
 
@@ -125,17 +126,32 @@ std::vector<QString> PostgresCatalogProvider::listHiddenSchemas() {
     return { "information_schema", "pg_catalog", "pg_toast" };
 }
 
-std::vector<QString> PostgresCatalogProvider::listTables(const QString& schema) {
-    std::vector<QString> tables;
+std::vector<CatalogTable> PostgresCatalogProvider::listTables(const QString& schema) {
+    std::vector<CatalogTable> tables;
     QSqlDatabase db = QSqlDatabase::database(m_connectionName);
     if (!db.isOpen()) return tables;
 
     QSqlQuery q(db);
-    q.prepare("SELECT table_name FROM information_schema.tables WHERE table_schema = :schema ORDER BY table_name");
+    q.prepare(
+        "SELECT t.table_name, "
+        "       EXISTS ("
+        "           SELECT 1"
+        "           FROM information_schema.table_constraints tc"
+        "           WHERE tc.table_schema = t.table_schema"
+        "             AND tc.table_name = t.table_name"
+        "             AND tc.constraint_type = 'PRIMARY KEY'"
+        "       ) AS has_primary_key "
+        "FROM information_schema.tables t "
+        "WHERE t.table_schema = :schema "
+        "ORDER BY t.table_name"
+    );
     q.bindValue(":schema", schema);
     if (q.exec()) {
         while (q.next()) {
-            tables.push_back(q.value(0).toString());
+            CatalogTable table;
+            table.name = q.value(0).toString();
+            table.hasPrimaryKey = q.value(1).toBool();
+            tables.push_back(table);
         }
     }
     return tables;
@@ -272,7 +288,46 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
 
     QString sql = QString("SELECT * FROM \"%1\".\"%2\" LIMIT %3 OFFSET %4")
                       .arg(schema).arg(table).arg(sqlLimit).arg(offset);
-    return execute(sql, req);
+    DatasetPage page = execute(sql, req);
+
+    if (page.columns.empty()) {
+        return page;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database(m_connectionName);
+    if (!db.isOpen()) {
+        return page;
+    }
+
+    QSqlQuery pkQuery(db);
+    pkQuery.prepare(
+        "SELECT kcu.column_name "
+        "FROM information_schema.table_constraints tc "
+        "JOIN information_schema.key_column_usage kcu "
+        "  ON tc.constraint_name = kcu.constraint_name "
+        " AND tc.table_schema = kcu.table_schema "
+        " AND tc.table_name = kcu.table_name "
+        "WHERE tc.constraint_type = 'PRIMARY KEY' "
+        "  AND tc.table_schema = :schema "
+        "  AND tc.table_name = :table"
+    );
+    pkQuery.bindValue(":schema", schema);
+    pkQuery.bindValue(":table", table);
+
+    QSet<QString> primaryKeyColumns;
+    if (pkQuery.exec()) {
+        while (pkQuery.next()) {
+            primaryKeyColumns.insert(pkQuery.value(0).toString());
+        }
+    }
+
+    if (!primaryKeyColumns.isEmpty()) {
+        for (auto& col : page.columns) {
+            col.isPrimaryKey = primaryKeyColumns.contains(col.name);
+        }
+    }
+
+    return page;
 }
 
 int PostgresQueryProvider::count(const QString& schema, const QString& table) {

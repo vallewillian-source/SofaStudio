@@ -23,6 +23,7 @@ QVariantMap QueryWorker::datasetToVariant(const DatasetPage& page)
         QVariantMap colMap;
         colMap["name"] = col.name;
         colMap["type"] = col.rawType;
+        colMap["isPrimaryKey"] = col.isPrimaryKey;
         columns.append(colMap);
     }
     result["columns"] = columns;

@@ -5,6 +5,7 @@
 #include <QFontMetrics>
 #include <QHoverEvent>
 #include <QMouseEvent>
+#include <QPixmap>
 
 namespace Sofa::DataGrid {
 
@@ -25,6 +26,7 @@ DataGridView::DataGridView(QQuickItem* parent)
     setFillColor(Qt::transparent);
 
     m_gearIcon = new QSvgRenderer(QString(":/qt/qml/sofa/ui/assets/gear-solid-full.svg"), this);
+    m_primaryKeyIcon = new QSvgRenderer(QString(":/qt/qml/sofa/ui/assets/key-solid-full.svg"), this);
 }
 
 void DataGridView::markRowLayoutDirty()
@@ -920,6 +922,31 @@ void DataGridView::paint(QPainter* painter)
             painter->setFont(headerFont);
 
             QRectF textRect = cellRect.adjusted(8, 0, -5, 0);
+            if (col.isPrimaryKey && m_primaryKeyIcon && m_primaryKeyIcon->isValid()) {
+                const int pkIconSize = 11;
+                const int pkPaddingLeft = 8;
+                const int pkGap = 4;
+                if (colW > pkIconSize + (pkPaddingLeft + pkGap + 10)) {
+                    const double iconX = cellRect.left() + pkPaddingLeft;
+                    const double iconY = (m_rowHeight - pkIconSize) / 2.0;
+                    QRectF pkIconRect(iconX, iconY, pkIconSize, pkIconSize);
+
+                    QPixmap iconPixmap(pkIconSize, pkIconSize);
+                    iconPixmap.fill(Qt::transparent);
+
+                    QPainter iconPainter(&iconPixmap);
+                    m_primaryKeyIcon->render(&iconPainter, QRectF(0, 0, pkIconSize, pkIconSize));
+                    iconPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+                    QColor pkColor = m_resizeGuideColor;
+                    pkColor.setAlphaF(0.7);
+                    iconPainter.fillRect(iconPixmap.rect(), pkColor);
+                    iconPainter.end();
+
+                    painter->drawPixmap(pkIconRect.topLeft(), iconPixmap);
+                    textRect.setLeft(pkIconRect.right() + pkGap);
+                }
+            }
+
             if (c == m_hoveredHeaderColumn) {
                 const int iconSize = 14;
                 const int padding = 6;

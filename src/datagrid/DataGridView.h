@@ -137,6 +137,7 @@ private:
     int m_hoveredResizeColumn = -1;
     int m_hoveredRowResizeHandle = kRowResizeHandleNone;
     QSvgRenderer* m_gearIcon = nullptr;
+    QSvgRenderer* m_primaryKeyIcon = nullptr;
 
     // Resize Interaction
     int m_resizingColumn = -1;
