@@ -318,6 +318,7 @@ void DataGridView::updateHoverState(double x, double y)
                 || m_hoveredResizeColumn != -1
                 || m_hoveredRowResizeHandle != kRowResizeHandleNone) {
             m_hoveredHeaderColumn = -1;
+            m_hoveredHeaderRow = false;
             m_hoveredResizeColumn = -1;
             m_hoveredRowResizeHandle = kRowResizeHandleNone;
             update();
@@ -329,15 +330,18 @@ void DataGridView::updateHoverState(double x, double y)
     const int previousHoveredHeader = m_hoveredHeaderColumn;
     const int previousHoveredResizeColumn = m_hoveredResizeColumn;
     const int previousHoveredRowHandle = m_hoveredRowResizeHandle;
+    const bool previousHoveredHeaderRow = m_hoveredHeaderRow;
 
     if (m_resizingColumn != -1) {
         m_hoveredResizeColumn = m_resizingColumn;
         m_hoveredRowResizeHandle = kRowResizeHandleNone;
         m_hoveredHeaderColumn = -1;
+        m_hoveredHeaderRow = false;
     } else if (m_resizingRowResizeHandle != kRowResizeHandleNone) {
         m_hoveredResizeColumn = -1;
         m_hoveredRowResizeHandle = m_resizingRowResizeHandle;
         m_hoveredHeaderColumn = -1;
+        m_hoveredHeaderRow = false;
     } else {
         m_hoveredRowResizeHandle = rowResizeHandleAt(x, y);
         m_hoveredResizeColumn = m_hoveredRowResizeHandle != kRowResizeHandleNone
@@ -349,14 +353,17 @@ void DataGridView::updateHoverState(double x, double y)
                 || y >= m_rowHeight
                 || x < m_gutterWidth) {
             m_hoveredHeaderColumn = -1;
+            m_hoveredHeaderRow = false;
         } else {
             m_hoveredHeaderColumn = columnAtPosition(x);
+            m_hoveredHeaderRow = true;
         }
     }
 
     if (previousHoveredHeader != m_hoveredHeaderColumn
             || previousHoveredResizeColumn != m_hoveredResizeColumn
-            || previousHoveredRowHandle != m_hoveredRowResizeHandle) {
+            || previousHoveredRowHandle != m_hoveredRowResizeHandle
+            || previousHoveredHeaderRow != m_hoveredHeaderRow) {
         update();
     }
 
@@ -376,6 +383,11 @@ void DataGridView::refreshCursor()
         return;
     }
 
+    if (m_hoveredHeaderRow) {
+        setCursor(QCursor(Qt::PointingHandCursor));
+        return;
+    }
+
     unsetCursor();
 }
 
@@ -392,6 +404,7 @@ void DataGridView::hoverLeaveEvent(QHoverEvent* event)
                 || m_hoveredResizeColumn != -1
                 || m_hoveredRowResizeHandle != kRowResizeHandleNone) {
             m_hoveredHeaderColumn = -1;
+            m_hoveredHeaderRow = false;
             m_hoveredResizeColumn = -1;
             m_hoveredRowResizeHandle = kRowResizeHandleNone;
             update();
@@ -953,12 +966,20 @@ void DataGridView::paint(QPainter* painter)
     // Resize guides
     painter->save();
     QColor guideColor = m_resizeGuideColor;
-    guideColor.setAlphaF(0.9);
+    guideColor.setAlphaF(0.8);
     painter->setPen(QPen(guideColor, 1));
 
-    const int resizeColumn = m_resizingColumn != -1 ? m_resizingColumn : m_hoveredResizeColumn;
-    if (resizeColumn != -1) {
-        const double guideX = columnRightX(resizeColumn);
+    int guideColumn = -1;
+    if (m_resizingColumn != -1) {
+        guideColumn = m_resizingColumn;
+    } else if (m_hoveredResizeColumn != -1) {
+        guideColumn = m_hoveredResizeColumn;
+    } else if (m_hoveredHeaderColumn != -1) {
+        guideColumn = m_hoveredHeaderColumn;
+    }
+
+    if (guideColumn != -1) {
+        const double guideX = columnRightX(guideColumn);
         if (guideX >= m_gutterWidth && guideX <= w) {
             painter->drawLine(QPointF(guideX, 0), QPointF(guideX, h));
         }

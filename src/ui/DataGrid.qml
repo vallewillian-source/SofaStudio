@@ -166,7 +166,22 @@ Rectangle {
 
                 gridLineColor: "transparent"
                 textColor: Theme.textPrimary
-                resizeGuideColor: Theme.accent
+                resizeGuideColor: {
+                    var id = App.activeConnectionId
+                    var activeColor = Theme.accent
+
+                    if (id !== -1) {
+                        var conns = App.connections
+                        for (var i = 0; i < conns.length; i++) {
+                            if (conns[i].id === id) {
+                                activeColor = Theme.getConnectionColor(conns[i].name, conns[i].color)
+                                break
+                            }
+                        }
+                    }
+
+                    return activeColor
+                }
                 
                 // Bind scrollbars
                 contentY: vScroll.position * view.totalHeight
@@ -264,10 +279,8 @@ Rectangle {
                 }
             }
             
-            // Mouse Wheel Support
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.NoButton
+            // Mouse Wheel Support (handler avoids overlay items that can steal hover/cursor)
+            WheelHandler {
                 onWheel: (wheel) => {
                     if (wheel.angleDelta.y !== 0) {
                         var newY = view.contentY - wheel.angleDelta.y
@@ -286,6 +299,8 @@ Rectangle {
                         if (view.totalWidth > 0)
                             hScroll.position = view.contentX / view.totalWidth
                     }
+
+                    wheel.accepted = true
                 }
             }
             

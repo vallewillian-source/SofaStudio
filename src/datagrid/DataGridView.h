@@ -133,6 +133,7 @@ private:
     
     // Header Interaction
     int m_hoveredHeaderColumn = -1;
+    bool m_hoveredHeaderRow = false;
     int m_hoveredResizeColumn = -1;
     int m_hoveredRowResizeHandle = kRowResizeHandleNone;
     QSvgRenderer* m_gearIcon = nullptr;
