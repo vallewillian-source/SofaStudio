@@ -55,6 +55,7 @@ Popup {
             var columnType = ""
             var columnDefaultValue = ""
             var columnIsNullable = true
+            var columnIsPrimaryKey = false
             if (typeof column === "string") {
                 columnName = column
             } else if (column) {
@@ -62,6 +63,7 @@ Popup {
                 columnType = column.type || ""
                 columnDefaultValue = column.defaultValue || ""
                 columnIsNullable = column.isNullable !== false
+                columnIsPrimaryKey = column.isPrimaryKey === true
             }
             if (!columnName || columnName.length === 0) {
                 continue
@@ -71,6 +73,7 @@ Popup {
                 "type": columnType,
                 "defaultValue": columnDefaultValue,
                 "notNull": !columnIsNullable,
+                "isPrimaryKey": columnIsPrimaryKey,
                 "initialValue": "",
                 "originalRawValue": null,
                 "value": ""
@@ -103,6 +106,7 @@ Popup {
             var columnType = ""
             var columnDefaultValue = ""
             var columnIsNullable = true
+            var columnIsPrimaryKey = false
             if (typeof column === "string") {
                 columnName = column
             } else if (column) {
@@ -110,6 +114,7 @@ Popup {
                 columnType = column.type || ""
                 columnDefaultValue = column.defaultValue || ""
                 columnIsNullable = column.isNullable !== false
+                columnIsPrimaryKey = column.isPrimaryKey === true
             }
             if (!columnName || columnName.length === 0) {
                 continue
@@ -123,6 +128,7 @@ Popup {
                 "type": columnType,
                 "defaultValue": columnDefaultValue,
                 "notNull": !columnIsNullable,
+                "isPrimaryKey": columnIsPrimaryKey,
                 "initialValue": displayValue,
                 "originalRawValue": originalRawValue,
                 "value": displayValue
@@ -145,7 +151,8 @@ Popup {
             entries.push({
                 "name": row.name,
                 "value": row.value,
-                "originalValue": row.originalRawValue
+                "originalValue": row.originalRawValue,
+                "isPrimaryKey": row.isPrimaryKey === true
             })
         }
         return entries
@@ -165,7 +172,13 @@ Popup {
 
     function clearAllValues() {
         for (var i = 0; i < fieldsModel.count; i++) {
-            fieldsModel.setProperty(i, "value", "")
+            if (editing) {
+                var row = fieldsModel.get(i)
+                var initialValue = row.initialValue === null || row.initialValue === undefined ? "" : String(row.initialValue)
+                fieldsModel.setProperty(i, "value", initialValue)
+            } else {
+                fieldsModel.setProperty(i, "value", "")
+            }
         }
     }
 
@@ -187,6 +200,7 @@ Popup {
         if (editing) {
             var assignments = []
             var conditions = []
+            var pkConditions = []
             for (var e = 0; e < fieldsModel.count; e++) {
                 var editRow = fieldsModel.get(e)
                 var valueText = String(editRow.value === null || editRow.value === undefined ? "" : editRow.value)
@@ -205,22 +219,36 @@ Popup {
                 var originalValue = editRow.originalRawValue
                 if (originalValue === null || originalValue === undefined) {
                     conditions.push(quotedName + " IS NULL")
+                    if (editRow.isPrimaryKey === true) {
+                        pkConditions.push(quotedName + " IS NULL")
+                    }
                 } else if (typeof originalValue === "number") {
                     conditions.push(quotedName + " = " + String(originalValue))
+                    if (editRow.isPrimaryKey === true) {
+                        pkConditions.push(quotedName + " = " + String(originalValue))
+                    }
                 } else if (typeof originalValue === "boolean") {
                     conditions.push(quotedName + " = " + (originalValue ? "TRUE" : "FALSE"))
+                    if (editRow.isPrimaryKey === true) {
+                        pkConditions.push(quotedName + " = " + (originalValue ? "TRUE" : "FALSE"))
+                    }
                 } else {
-                    conditions.push(quotedName + " = " + quoteSqlStringLiteral(String(originalValue)))
+                    var quotedOriginal = quoteSqlStringLiteral(String(originalValue))
+                    conditions.push(quotedName + " = " + quotedOriginal)
+                    if (editRow.isPrimaryKey === true) {
+                        pkConditions.push(quotedName + " = " + quotedOriginal)
+                    }
                 }
             }
 
             if (assignments.length === 0) {
                 return "-- No changes detected."
             }
-            if (conditions.length === 0) {
+            var finalConditions = pkConditions.length > 0 ? pkConditions : conditions
+            if (finalConditions.length === 0) {
                 return ""
             }
-            return "UPDATE " + target + " SET " + assignments.join(", ") + " WHERE " + conditions.join(" AND ") + ";"
+            return "UPDATE " + target + " SET " + assignments.join(", ") + " WHERE " + finalConditions.join(" AND ") + ";"
         }
 
         var quotedCols = []

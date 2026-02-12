@@ -34,6 +34,7 @@ public:
     Q_INVOKABLE QString getColumnType(int index) const;
     Q_INVOKABLE QString getColumnDefaultValue(int index) const;
     Q_INVOKABLE bool getColumnIsNullable(int index) const;
+    Q_INVOKABLE bool getColumnIsPrimaryKey(int index) const;
     Q_INVOKABLE QVariantList getRow(int row) const;
     
     // For View

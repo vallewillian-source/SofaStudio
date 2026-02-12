@@ -68,6 +68,42 @@ Rectangle {
         hScroll.position = (maxX > 0 && hRange > 0) ? (view.contentX / maxX) * hRange : 0
         vScroll.position = (maxY > 0 && vRange > 0) ? (view.contentY / maxY) * vRange : 0
     }
+
+    function deltaFromWheel(pixelComponent, angleComponent) {
+        if (pixelComponent !== 0) return pixelComponent
+        if (angleComponent !== 0) return angleComponent / 2
+        return 0
+    }
+
+    function applyWheelScroll(deltaX, deltaY) {
+        var consumed = false
+
+        if (deltaY !== 0) {
+            var newY = view.contentY - deltaY
+            if (newY < 0) newY = 0
+            if (newY > view.totalHeight - view.height) newY = view.totalHeight - view.height
+            if (newY !== view.contentY) {
+                view.contentY = newY
+                consumed = true
+            }
+        }
+
+        if (deltaX !== 0) {
+            var newX = view.contentX - deltaX
+            if (newX < 0) newX = 0
+            if (newX > view.totalWidth - view.width) newX = view.totalWidth - view.width
+            if (newX !== view.contentX) {
+                view.contentX = newX
+                consumed = true
+            }
+        }
+
+        if (consumed) {
+            root.syncScrollBarsFromView()
+        }
+
+        return consumed
+    }
     
     function columnNames() {
         var cols = []
@@ -424,30 +460,33 @@ Rectangle {
                 }
             }
             
-            // Mouse Wheel Support (handler avoids overlay items that can steal hover/cursor)
+            // Mouse wheel vertical support (macOS uses pixelDelta on trackpads).
             WheelHandler {
+                target: view
+                orientation: Qt.Vertical
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                 onWheel: (wheel) => {
-                    if (wheel.angleDelta.y !== 0) {
-                        var newY = view.contentY - wheel.angleDelta.y
-                        if (newY < 0) newY = 0
-                        if (newY > view.totalHeight - view.height) newY = view.totalHeight - view.height
-                        view.contentY = newY
-                        // Sync ScrollBar
-                        var maxY = root.maxScrollY()
-                        var vRange = Math.max(0, 1 - vScroll.size)
-                        vScroll.position = (maxY > 0 && vRange > 0) ? (view.contentY / maxY) * vRange : 0
-                    }
-                    if (wheel.angleDelta.x !== 0) {
-                        var newX = view.contentX - wheel.angleDelta.x
-                        if (newX < 0) newX = 0
-                        if (newX > view.totalWidth - view.width) newX = view.totalWidth - view.width
-                        view.contentX = newX
-                        var maxX = root.maxScrollX()
-                        var hRange = Math.max(0, 1 - hScroll.size)
-                        hScroll.position = (maxX > 0 && hRange > 0) ? (view.contentX / maxX) * hRange : 0
+                    var deltaY = root.deltaFromWheel(wheel.pixelDelta.y, wheel.angleDelta.y)
+                    var deltaX = 0
+
+                    // Common desktop behavior: Shift + vertical wheel scrolls horizontally.
+                    if ((wheel.modifiers & Qt.ShiftModifier) && deltaX === 0 && deltaY !== 0) {
+                        deltaX = deltaY
+                        deltaY = 0
                     }
 
-                    wheel.accepted = true
+                    wheel.accepted = root.applyWheelScroll(deltaX, deltaY)
+                }
+            }
+
+            // Mouse/trackpad horizontal support.
+            WheelHandler {
+                target: view
+                orientation: Qt.Horizontal
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: (wheel) => {
+                    var deltaX = root.deltaFromWheel(wheel.pixelDelta.x, wheel.angleDelta.x)
+                    wheel.accepted = root.applyWheelScroll(deltaX, 0)
                 }
             }
             

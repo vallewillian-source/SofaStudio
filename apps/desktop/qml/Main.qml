@@ -571,7 +571,8 @@ ApplicationWindow {
                         "name": gridEngine.getColumnName(i),
                         "type": gridEngine.getColumnType(i),
                         "defaultValue": gridEngine.getColumnDefaultValue(i),
-                        "isNullable": gridEngine.getColumnIsNullable(i)
+                        "isNullable": gridEngine.getColumnIsNullable(i),
+                        "isPrimaryKey": gridEngine.getColumnIsPrimaryKey(i)
                     })
                 }
                 return cols
@@ -751,6 +752,7 @@ ApplicationWindow {
                 var target = quoteIdentifier(tableRoot.schema) + "." + quoteIdentifier(tableRoot.tableName)
                 var setParts = []
                 var whereParts = []
+                var pkWhereParts = []
 
                 for (var i = 0; i < entries.length; i++) {
                     var entry = entries[i]
@@ -770,17 +772,34 @@ ApplicationWindow {
 
                     if (original === null || original === undefined) {
                         whereParts.push(colName + " IS NULL")
+                        if (entry.isPrimaryKey === true) {
+                            pkWhereParts.push(colName + " IS NULL")
+                        }
                     } else if (typeof original === "number") {
                         whereParts.push(colName + " = " + String(original))
+                        if (entry.isPrimaryKey === true) {
+                            pkWhereParts.push(colName + " = " + String(original))
+                        }
                     } else if (typeof original === "boolean") {
                         whereParts.push(colName + " = " + (original ? "TRUE" : "FALSE"))
+                        if (entry.isPrimaryKey === true) {
+                            pkWhereParts.push(colName + " = " + (original ? "TRUE" : "FALSE"))
+                        }
                     } else {
-                        whereParts.push(colName + " = '" + String(original).replace(/'/g, "''") + "'")
+                        var quotedOriginal = "'" + String(original).replace(/'/g, "''") + "'"
+                        whereParts.push(colName + " = " + quotedOriginal)
+                        if (entry.isPrimaryKey === true) {
+                            pkWhereParts.push(colName + " = " + quotedOriginal)
+                        }
                     }
                 }
 
-                if (setParts.length === 0 || whereParts.length === 0) return ""
-                return "UPDATE " + target + " SET " + setParts.join(", ") + " WHERE " + whereParts.join(" AND ") + ";"
+                if (setParts.length === 0) return ""
+
+                var finalWhereParts = pkWhereParts.length > 0 ? pkWhereParts : whereParts
+                if (finalWhereParts.length === 0) return ""
+
+                return "UPDATE " + target + " SET " + setParts.join(", ") + " WHERE " + finalWhereParts.join(" AND ") + ";"
             }
 
             color: Theme.background

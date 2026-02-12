@@ -148,6 +148,14 @@ bool DataGridEngine::getColumnIsNullable(int index) const
     return true;
 }
 
+bool DataGridEngine::getColumnIsPrimaryKey(int index) const
+{
+    if (index >= 0 && index < m_schema.columns.size()) {
+        return m_schema.columns[index].isPrimaryKey;
+    }
+    return false;
+}
+
 QVariantList DataGridEngine::getRow(int row) const
 {
     QVariantList list;
