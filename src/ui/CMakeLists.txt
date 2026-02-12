@@ -13,6 +13,9 @@ set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(SofaUI
     URI sofa.ui
     VERSION 1.0
+    SOURCES
+        SqlSyntaxHighlighter.cpp
+        SqlSyntaxHighlighter.h
     QML_FILES
         Button.qml
         Theme.qml

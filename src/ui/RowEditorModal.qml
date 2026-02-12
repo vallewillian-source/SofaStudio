@@ -320,17 +320,33 @@ Popup {
                                 border.color: Theme.border
                                 border.width: 1
                                 radius: Theme.radius
-                                implicitHeight: previewSqlText.implicitHeight + (Theme.spacingMedium * 2)
+                                implicitHeight: Math.max(56, previewSqlText.contentHeight + (Theme.spacingMedium * 2))
 
-                                Text {
+                                TextArea {
                                     id: previewSqlText
                                     anchors.fill: parent
-                                    anchors.margins: Theme.spacingMedium
+                                    readOnly: true
+                                    selectByMouse: true
+                                    wrapMode: TextEdit.WrapAnywhere
+                                    leftPadding: Theme.spacingMedium
+                                    rightPadding: Theme.spacingMedium
+                                    topPadding: Theme.spacingMedium
+                                    bottomPadding: Theme.spacingMedium
                                     text: root.buildPreviewSql()
                                     color: Theme.textPrimary
+                                    selectionColor: Theme.accent
+                                    selectedTextColor: "#FFFFFF"
+                                    background: Rectangle { color: "transparent" }
                                     font.pixelSize: 11
                                     font.family: Qt.platform.os === "osx" ? "Menlo" : "Monospace"
-                                    wrapMode: Text.WrapAnywhere
+                                }
+
+                                SqlSyntaxHighlighter {
+                                    document: previewSqlText.textDocument
+                                    keywordColor: Theme.accentSecondary
+                                    stringColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[3], 0.55)
+                                    numberColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[8], 0.65)
+                                    commentColor: Theme.textSecondary
                                 }
                             }
                         }

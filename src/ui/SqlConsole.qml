@@ -176,7 +176,7 @@ Item {
                     
                     TextArea {
                         id: queryEditor
-                        font.family: "Monospace" // TODO: Use a proper mono font
+                        font.family: Qt.platform.os === "osx" ? "Menlo" : "Monospace"
                         font.pixelSize: 13
                         color: Theme.textPrimary
                         selectionColor: Theme.accent
@@ -205,6 +205,14 @@ Item {
                                 root.queryTextEdited(text)
                             }
                         }
+                    }
+
+                    SqlSyntaxHighlighter {
+                        document: queryEditor.textDocument
+                        keywordColor: Theme.accentSecondary
+                        stringColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[3], 0.55)
+                        numberColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[8], 0.65)
+                        commentColor: Theme.textSecondary
                     }
                 }
             }
