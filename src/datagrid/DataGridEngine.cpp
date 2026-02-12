@@ -132,6 +132,14 @@ QString DataGridEngine::getColumnType(int index) const
     return QString();
 }
 
+QString DataGridEngine::getColumnDefaultValue(int index) const
+{
+    if (index >= 0 && index < m_schema.columns.size()) {
+        return m_schema.columns[index].defaultValue;
+    }
+    return QString();
+}
+
 bool DataGridEngine::getColumnIsNullable(int index) const
 {
     if (index >= 0 && index < m_schema.columns.size()) {
@@ -173,6 +181,7 @@ void DataGridEngine::loadFromVariant(const QVariantMap& data)
         Sofa::Core::Column col;
         col.name = map["name"].toString();
         col.rawType = map["type"].toString();
+        col.defaultValue = map["defaultValue"].toString();
         col.isPrimaryKey = map["isPrimaryKey"].toBool();
         col.isNullable = map.value("isNullable", true).toBool();
         QString raw = col.rawType.toLower();

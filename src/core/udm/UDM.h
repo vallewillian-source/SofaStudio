@@ -21,6 +21,7 @@ struct Column {
     QString name;
     DataType type;
     QString rawType; // original db type name
+    QString defaultValue;
     bool isPrimaryKey = false;
     bool isNullable = true;
     int displayWidth = 100;

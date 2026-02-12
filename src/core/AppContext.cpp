@@ -417,6 +417,7 @@ QVariantMap AppContext::runQuery(const QString& queryText)
         QVariantMap colMap;
         colMap["name"] = col.name;
         colMap["type"] = col.rawType;
+        colMap["defaultValue"] = col.defaultValue;
         colMap["isPrimaryKey"] = col.isPrimaryKey;
         colMap["isNullable"] = col.isNullable;
         columns.append(colMap);
@@ -539,6 +540,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         QVariantMap c;
         c["name"] = col.name;
         c["type"] = col.rawType;
+        c["defaultValue"] = col.defaultValue;
         c["isPrimaryKey"] = col.isPrimaryKey;
         c["isNullable"] = col.isNullable;
         columns.append(c);

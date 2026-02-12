@@ -296,7 +296,7 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
 
     QSqlQuery typeQuery(db);
     typeQuery.prepare(
-        "SELECT column_name, udt_name, is_nullable "
+        "SELECT column_name, udt_name, is_nullable, column_default "
         "FROM information_schema.columns "
         "WHERE table_schema = :schema "
         "  AND table_name = :table"
@@ -306,11 +306,13 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
 
     QHash<QString, QString> sqlTypeByColumn;
     QHash<QString, bool> isNullableByColumn;
+    QHash<QString, QString> defaultValueByColumn;
     if (typeQuery.exec()) {
         while (typeQuery.next()) {
             sqlTypeByColumn.insert(typeQuery.value(0).toString(), typeQuery.value(1).toString());
             const QString nullableRaw = typeQuery.value(2).toString().trimmed().toUpper();
             isNullableByColumn.insert(typeQuery.value(0).toString(), nullableRaw == "YES");
+            defaultValueByColumn.insert(typeQuery.value(0).toString(), typeQuery.value(3).toString());
         }
     }
 
@@ -363,6 +365,9 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
         }
         if (isNullableByColumn.contains(col.name)) {
             col.isNullable = isNullableByColumn.value(col.name);
+        }
+        if (defaultValueByColumn.contains(col.name)) {
+            col.defaultValue = defaultValueByColumn.value(col.name);
         }
     }
 

@@ -51,12 +51,14 @@ Popup {
             var column = columns[i]
             var columnName = ""
             var columnType = ""
+            var columnDefaultValue = ""
             var columnIsNullable = true
             if (typeof column === "string") {
                 columnName = column
             } else if (column) {
                 columnName = column.name || ""
                 columnType = column.type || ""
+                columnDefaultValue = column.defaultValue || ""
                 columnIsNullable = column.isNullable !== false
             }
             if (!columnName || columnName.length === 0) {
@@ -65,6 +67,7 @@ Popup {
             fieldsModel.append({
                 "name": columnName,
                 "type": columnType,
+                "defaultValue": columnDefaultValue,
                 "notNull": !columnIsNullable,
                 "value": ""
             })
@@ -92,6 +95,46 @@ Popup {
         for (var i = 0; i < fieldsModel.count; i++) {
             fieldsModel.setProperty(i, "value", "")
         }
+    }
+
+    function quoteIdentifier(name) {
+        return "\"" + String(name).replace(/"/g, "\"\"") + "\""
+    }
+
+    function quoteSqlStringLiteral(value) {
+        return "'" + String(value).replace(/'/g, "''") + "'"
+    }
+
+    function buildPreviewSql() {
+        if (!tableName || tableName.length === 0) return ""
+
+        var target = schemaName && schemaName.length > 0
+            ? quoteIdentifier(schemaName) + "." + quoteIdentifier(tableName)
+            : quoteIdentifier(tableName)
+
+        var quotedCols = []
+        var quotedVals = []
+        for (var i = 0; i < fieldsModel.count; i++) {
+            var row = fieldsModel.get(i)
+            var rawValue = row.value
+            if (rawValue === null || rawValue === undefined) continue
+
+            var rawText = String(rawValue)
+            var trimmed = rawText.trim()
+            if (trimmed.length === 0) continue
+
+            quotedCols.push(quoteIdentifier(row.name))
+            if (trimmed.toUpperCase() === "NULL") {
+                quotedVals.push("NULL")
+            } else {
+                quotedVals.push(quoteSqlStringLiteral(rawText))
+            }
+        }
+
+        if (quotedCols.length === 0) {
+            return "INSERT INTO " + target + " DEFAULT VALUES;"
+        }
+        return "INSERT INTO " + target + " (" + quotedCols.join(", ") + ") VALUES (" + quotedVals.join(", ") + ");"
     }
 
     function requestSubmit() {
@@ -246,60 +289,48 @@ Popup {
                         color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.08)
                         border.color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.35)
                         border.width: 1
-                        implicitHeight: helperContent.implicitHeight + (Theme.spacingMedium * 2)
+                        implicitHeight: helperContent.implicitHeight + ((Theme.spacingMedium + 2) * 2)
 
                         ColumnLayout {
                             id: helperContent
                             anchors.fill: parent
-                            anchors.margins: Theme.spacingMedium
+                            anchors.margins: Theme.spacingMedium + 2
                             spacing: Theme.spacingSmall
 
                             Text {
                                 Layout.fillWidth: true
-                                text: "Input semantics"
+                                text: "SQL preview"
                                 color: Theme.textPrimary
                                 font.pixelSize: 12
                                 font.bold: true
+                                Layout.bottomMargin: 3
                             }
 
-                            Flow {
+                            Text {
                                 Layout.fillWidth: true
-                                spacing: Theme.spacingSmall
+                                text: "Generated from the current form values."
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
 
-                                Rectangle {
-                                    radius: Theme.radius
-                                    color: Theme.surface
-                                    border.color: Theme.border
-                                    border.width: 1
-                                    height: 24
-                                    width: emptyTokenLabel.implicitWidth + (Theme.spacingMedium * 2)
+                            Rectangle {
+                                Layout.fillWidth: true
+                                color: Theme.background
+                                border.color: Theme.border
+                                border.width: 1
+                                radius: Theme.radius
+                                implicitHeight: previewSqlText.implicitHeight + (Theme.spacingMedium * 2)
 
-                                    Text {
-                                        id: emptyTokenLabel
-                                        anchors.centerIn: parent
-                                        text: "Empty -> DB default"
-                                        color: Theme.textSecondary
-                                        font.pixelSize: 11
-                                        font.bold: true
-                                    }
-                                }
-
-                                Rectangle {
-                                    radius: Theme.radius
-                                    color: Theme.surface
-                                    border.color: Theme.border
-                                    border.width: 1
-                                    height: 24
-                                    width: nullTokenLabel.implicitWidth + (Theme.spacingMedium * 2)
-
-                                    Text {
-                                        id: nullTokenLabel
-                                        anchors.centerIn: parent
-                                        text: "NULL -> SQL null"
-                                        color: Theme.textSecondary
-                                        font.pixelSize: 11
-                                        font.bold: true
-                                    }
+                                Text {
+                                    id: previewSqlText
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.spacingMedium
+                                    text: root.buildPreviewSql()
+                                    color: Theme.textPrimary
+                                    font.pixelSize: 11
+                                    font.family: Qt.platform.os === "osx" ? "Menlo" : "Monospace"
+                                    wrapMode: Text.WrapAnywhere
                                 }
                             }
                         }
@@ -388,7 +419,7 @@ Popup {
                                         Layout.fillWidth: true
                                         accentColor: root.accentColor
                                         enabled: !root.submitting
-                                        placeholderText: ""
+                                        placeholderText: model.defaultValue || ""
                                         text: model.value
                                         onTextChanged: {
                                             fieldsModel.setProperty(index, "value", text)

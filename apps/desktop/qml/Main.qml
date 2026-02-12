@@ -570,6 +570,7 @@ ApplicationWindow {
                     cols.push({
                         "name": gridEngine.getColumnName(i),
                         "type": gridEngine.getColumnType(i),
+                        "defaultValue": gridEngine.getColumnDefaultValue(i),
                         "isNullable": gridEngine.getColumnIsNullable(i)
                     })
                 }
