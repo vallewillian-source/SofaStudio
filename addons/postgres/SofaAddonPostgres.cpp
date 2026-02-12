@@ -296,7 +296,7 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
 
     QSqlQuery typeQuery(db);
     typeQuery.prepare(
-        "SELECT column_name, udt_name "
+        "SELECT column_name, udt_name, is_nullable "
         "FROM information_schema.columns "
         "WHERE table_schema = :schema "
         "  AND table_name = :table"
@@ -305,9 +305,12 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
     typeQuery.bindValue(":table", table);
 
     QHash<QString, QString> sqlTypeByColumn;
+    QHash<QString, bool> isNullableByColumn;
     if (typeQuery.exec()) {
         while (typeQuery.next()) {
             sqlTypeByColumn.insert(typeQuery.value(0).toString(), typeQuery.value(1).toString());
+            const QString nullableRaw = typeQuery.value(2).toString().trimmed().toUpper();
+            isNullableByColumn.insert(typeQuery.value(0).toString(), nullableRaw == "YES");
         }
     }
 
@@ -357,6 +360,9 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
         const QString sqlType = sqlTypeByColumn.value(col.name);
         if (!sqlType.isEmpty()) {
             col.rawType = sqlType;
+        }
+        if (isNullableByColumn.contains(col.name)) {
+            col.isNullable = isNullableByColumn.value(col.name);
         }
     }
 

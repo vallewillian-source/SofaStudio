@@ -569,7 +569,8 @@ ApplicationWindow {
                 for (var i = 0; i < count; i++) {
                     cols.push({
                         "name": gridEngine.getColumnName(i),
-                        "type": gridEngine.getColumnType(i)
+                        "type": gridEngine.getColumnType(i),
+                        "isNullable": gridEngine.getColumnIsNullable(i)
                     })
                 }
                 return cols

@@ -24,6 +24,7 @@ QVariantMap QueryWorker::datasetToVariant(const DatasetPage& page)
         colMap["name"] = col.name;
         colMap["type"] = col.rawType;
         colMap["isPrimaryKey"] = col.isPrimaryKey;
+        colMap["isNullable"] = col.isNullable;
         columns.append(colMap);
     }
     result["columns"] = columns;

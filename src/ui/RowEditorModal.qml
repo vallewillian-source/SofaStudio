@@ -29,6 +29,11 @@ Popup {
     property string errorMessage: ""
     property color accentColor: Theme.accent
     property bool editing: false
+    readonly property color notNullMarkerColor: Qt.rgba(
+                                                     (Theme.error.r * 0.82) + (root.accentColor.r * 0.18),
+                                                     (Theme.error.g * 0.82) + (root.accentColor.g * 0.18),
+                                                     (Theme.error.b * 0.82) + (root.accentColor.b * 0.18),
+                                                     1.0)
     readonly property string fullTableName: (root.schemaName.length > 0 ? root.schemaName + "." : "") + root.tableName
     readonly property int fieldCount: fieldsModel.count
 
@@ -46,11 +51,13 @@ Popup {
             var column = columns[i]
             var columnName = ""
             var columnType = ""
+            var columnIsNullable = true
             if (typeof column === "string") {
                 columnName = column
             } else if (column) {
                 columnName = column.name || ""
                 columnType = column.type || ""
+                columnIsNullable = column.isNullable !== false
             }
             if (!columnName || columnName.length === 0) {
                 continue
@@ -58,6 +65,7 @@ Popup {
             fieldsModel.append({
                 "name": columnName,
                 "type": columnType,
+                "notNull": !columnIsNullable,
                 "value": ""
             })
         }
@@ -335,14 +343,28 @@ Popup {
                                         spacing: Theme.spacingSmall
 
                                         Text {
+                                            id: notNullMarker
+                                            Layout.alignment: Qt.AlignVCenter
+                                            text: "*"
+                                            visible: model.notNull === true
+                                            color: root.notNullMarkerColor
+                                            font.pixelSize: 13
+                                            font.bold: true
+                                        }
+
+                                        Text {
                                             id: fieldNameLabel
                                             Layout.preferredWidth: Math.min(
                                                                        fieldNameLabel.implicitWidth,
                                                                        Math.max(
                                                                            0,
-                                                                           fieldMetaRow.width - (fieldTypeLabel.visible
-                                                                                                 ? (fieldTypeLabel.implicitWidth + fieldMetaRow.spacing)
-                                                                                                 : 0)))
+                                                                           fieldMetaRow.width
+                                                                           - (notNullMarker.visible
+                                                                                ? (notNullMarker.implicitWidth + fieldMetaRow.spacing)
+                                                                                : 0)
+                                                                           - (fieldTypeLabel.visible
+                                                                                ? (fieldTypeLabel.implicitWidth + fieldMetaRow.spacing)
+                                                                                : 0)))
                                             text: model.name
                                             color: Theme.textPrimary
                                             font.pixelSize: 14
