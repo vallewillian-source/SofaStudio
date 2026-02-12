@@ -2,11 +2,30 @@
 #include <QVariantMap>
 #include <QStringList>
 #include <QJsonDocument>
+#include <QRegularExpression>
 #include <QSet>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include "addons/IAddon.h"
 #include "udm/UDM.h"
+
+namespace {
+
+QString sanitizeDriverErrorSuffix(const QString& error)
+{
+    if (error.isEmpty()) {
+        return error;
+    }
+
+    QString sanitized = error;
+    static const QRegularExpression kQpsqlSuffix(
+        QStringLiteral("\\s*(?:\\([A-Za-z0-9]+\\)\\s*)?QPSQL:\\s*(?:N[ãa]o foi poss[ií]vel criar a pesquisa|Unable to create query)\\s*$"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    sanitized.replace(kQpsqlSuffix, QString());
+    return sanitized.trimmed();
+}
+
+} // namespace
 
 namespace Sofa::Core {
 
@@ -73,8 +92,9 @@ void AppContext::clearLastError()
 
 void AppContext::setLastError(const QString& error)
 {
-    if (m_lastError == error) return;
-    m_lastError = error;
+    const QString cleanError = sanitizeDriverErrorSuffix(error);
+    if (m_lastError == cleanError) return;
+    m_lastError = cleanError;
     emit lastErrorChanged();
 }
 
@@ -405,8 +425,9 @@ QVariantMap AppContext::runQuery(const QString& queryText)
         result["warning"] = page.warning;
     }
     if (!page.warning.isEmpty() && page.columns.empty()) {
-        result["error"] = page.warning;
-        setLastError(page.warning);
+        const QString cleanWarning = sanitizeDriverErrorSuffix(page.warning);
+        result["error"] = cleanWarning;
+        setLastError(cleanWarning);
         return result;
     }
     
@@ -495,7 +516,7 @@ QVariantList AppContext::getQueryHistory(int connectionId)
     return list;
 }
 
-QVariantMap AppContext::getDataset(const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending)
+QVariantMap AppContext::getDataset(const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending, const QString& filterClause)
 {
     QVariantMap result;
     if (!m_currentConnection || !m_currentConnection->isOpen()) {
@@ -517,6 +538,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
     request.hasSort = !sortColumn.isEmpty();
     request.sortColumn = sortColumn;
     request.sortAscending = sortAscending;
+    request.filter = filterClause;
     
     auto queryProvider = m_currentConnection->query();
     if (!queryProvider) {
@@ -533,8 +555,9 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
         m_logger->warning("\x1b[33m⚠️ Dataset\x1b[0m " + page.warning);
     }
     if (!page.warning.isEmpty()) {
-        result["error"] = page.warning;
-        setLastError(page.warning);
+        const QString cleanWarning = sanitizeDriverErrorSuffix(page.warning);
+        result["error"] = cleanWarning;
+        setLastError(cleanWarning);
     }
     
     QVariantList columns;
@@ -601,7 +624,7 @@ QVariantMap AppContext::getDataset(const QString& schema, const QString& table, 
     return result;
 }
 
-bool AppContext::getDatasetAsync(const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending, const QString& requestTag)
+bool AppContext::getDatasetAsync(const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending, const QString& requestTag, const QString& filterClause)
 {
     if (!m_currentConnection || !m_currentConnection->isOpen()) {
         setLastError("Connection is not open.");
@@ -636,7 +659,8 @@ bool AppContext::getDatasetAsync(const QString& schema, const QString& table, in
                               Q_ARG(int, offset),
                               Q_ARG(QString, sortColumn),
                               Q_ARG(bool, sortAscending),
-                              Q_ARG(QString, requestTag));
+                              Q_ARG(QString, requestTag),
+                              Q_ARG(QString, filterClause));
     return true;
 }
 
@@ -705,11 +729,12 @@ void AppContext::handleSqlError(const QString& requestTag, const QString& error)
     if (requestTag != m_activeRequestTag && !m_activeRequestTag.isEmpty()) return;
     m_queryRunning = false;
     emit queryRunningChanged();
-    setLastError(error);
+    const QString cleanError = sanitizeDriverErrorSuffix(error);
+    setLastError(cleanError);
     m_activeBackendPid = -1;
     m_activeRequestTag.clear();
     m_activeRequestType.clear();
-    emit sqlError(requestTag, error);
+    emit sqlError(requestTag, cleanError);
 }
 
 void AppContext::handleDatasetStarted(const QString& requestTag, int backendPid)
@@ -737,11 +762,12 @@ void AppContext::handleDatasetError(const QString& requestTag, const QString& er
     if (requestTag != m_activeRequestTag && !m_activeRequestTag.isEmpty()) return;
     m_queryRunning = false;
     emit queryRunningChanged();
-    setLastError(error);
+    const QString cleanError = sanitizeDriverErrorSuffix(error);
+    setLastError(cleanError);
     m_activeBackendPid = -1;
     m_activeRequestTag.clear();
     m_activeRequestType.clear();
-    emit datasetError(requestTag, error);
+    emit datasetError(requestTag, cleanError);
 }
 
 void AppContext::handleCountFinished(const QString& requestTag, int total)

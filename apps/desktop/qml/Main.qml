@@ -303,6 +303,7 @@ ApplicationWindow {
                 
                 // Content Area
                 StackLayout {
+                    id: contentStack
                     currentIndex: appTabs.currentIndex
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -314,6 +315,7 @@ ApplicationWindow {
                         Loader {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            property int tabIndex: index
                             
                             property string itemType: model.type || "home"
                             property string itemSchema: model.schema || "public"
@@ -328,6 +330,9 @@ ApplicationWindow {
                                     item.schema = itemSchema
                                     item.tableName = itemTable
                                     item.loadData()
+                                    if (rightFiltersDrawer.visible && appTabs.currentIndex === index) {
+                                        rightFiltersDrawer.syncSimpleFieldModelFromActiveTable()
+                                    }
                                 }
                                 if (item && itemType === "connection_form") {
                                     if (model.connectionId !== -1) {
@@ -550,6 +555,8 @@ ApplicationWindow {
             property bool sortAscending: true
             property bool sortActive: false
             property var lastDatasetResult: ({})
+            property var tableStructureColumns: []
+            property string appliedFilterClause: ""
             property bool requestInFlight: false
             property bool delayedLoadingForCurrentRequest: false
             
@@ -1043,8 +1050,12 @@ ApplicationWindow {
                 engine: gridEngine
                 schemaName: tableRoot.schema
                 tableName: tableRoot.tableName
-                emptyStateTitle: "This table has no rows yet"
-                emptyStateDescription: "Use Add Row to insert the first record, or adjust your pagination to inspect other pages."
+                emptyStateTitle: tableRoot.appliedFilterClause.trim().length > 0
+                    ? "No rows match the current filters"
+                    : "This table has no rows yet"
+                emptyStateDescription: tableRoot.appliedFilterClause.trim().length > 0
+                    ? "Adjust or clear filters to see more results."
+                    : "Use Add Row to insert the first record, or adjust your pagination to inspect other pages."
                 sortedColumnIndex: tableRoot.currentSortColumnIndex()
                 sortAscending: tableRoot.sortAscending
                 visible: !tableRoot.loading && tableRoot.errorMessage.length === 0
@@ -1196,7 +1207,10 @@ ApplicationWindow {
                     tableRoot.pendingLoad = false
                     tableRoot.pendingLoadUseDelayed = false
                     console.log("\u001b[34m📥 Buscando dados\u001b[0m", schema + "." + tableName)
-                    tableRoot.requestTag = "table:" + schema + "." + tableName + ":page:" + tableRoot.pageIndex
+                    var filterTag = tableRoot.appliedFilterClause.length > 0
+                        ? ":filter:" + String(tableRoot.appliedFilterClause.length)
+                        : ":filter:0"
+                    tableRoot.requestTag = "table:" + schema + "." + tableName + ":page:" + tableRoot.pageIndex + filterTag
                     tableRoot.requestInFlight = true
                     tableRoot.delayedLoadingForCurrentRequest = useDelayedLoading
                     tableRoot.loading = !useDelayedLoading
@@ -1213,7 +1227,8 @@ ApplicationWindow {
                         offset,
                         "",
                         true,
-                        tableRoot.requestTag
+                        tableRoot.requestTag,
+                        tableRoot.appliedFilterClause
                     )
                     if (!ok) {
                         tableRoot.requestInFlight = false
@@ -1240,6 +1255,8 @@ ApplicationWindow {
                 tableRoot.pageIndex = 0
                 tableRoot.resetSortState()
                 tableRoot.lastDatasetResult = ({})
+                tableRoot.tableStructureColumns = []
+                tableRoot.appliedFilterClause = ""
                 tableRoot.requestInFlight = false
                 tableRoot.delayedLoadingForCurrentRequest = false
                 loadingVisualDelayTimer.stop()
@@ -1249,6 +1266,8 @@ ApplicationWindow {
                 tableRoot.pageIndex = 0
                 tableRoot.resetSortState()
                 tableRoot.lastDatasetResult = ({})
+                tableRoot.tableStructureColumns = []
+                tableRoot.appliedFilterClause = ""
                 tableRoot.requestInFlight = false
                 tableRoot.delayedLoadingForCurrentRequest = false
                 loadingVisualDelayTimer.stop()
@@ -1313,7 +1332,11 @@ ApplicationWindow {
                     tableRoot.empty = result.rows && result.rows.length === 0
 
                     tableRoot.lastDatasetResult = result
+                    tableRoot.tableStructureColumns = result.columns ? result.columns : []
                     tableRoot.applySortToCurrentDataset()
+                    if (rightFiltersDrawer.visible) {
+                        rightFiltersDrawer.syncSimpleFieldModelFromActiveTable()
+                    }
                 }
                 function onDatasetError(tag, error) {
                     if (tag !== tableRoot.requestTag && tableRoot.requestTag.length > 0) return;
@@ -1407,6 +1430,69 @@ ApplicationWindow {
         property string manualWhereText: ""
         property int simpleSelectedFieldIndex: 0
         property int simpleSelectedOperatorIndex: 0
+        function activeTableLoader() {
+            if (!contentStack) return null
+            var children = contentStack.children
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i]
+                if (!child || child.tabIndex === undefined) continue
+                if (child.tabIndex !== appTabs.currentIndex) continue
+                if (child.itemType !== "table" || !child.item) return null
+                return child
+            }
+            return null
+        }
+
+        function activeTableColumns() {
+            var loader = activeTableLoader()
+            if (!loader || !loader.item) return []
+
+            var structureCols = loader.item.tableStructureColumns
+            if (structureCols && structureCols.length > 0) {
+                return structureCols
+            }
+            if (loader.item.addRowColumns) {
+                return loader.item.addRowColumns()
+            }
+            return []
+        }
+
+        function syncSimpleFieldModelFromActiveTable() {
+            var previousFieldName = ""
+            if (simpleSelectedFieldIndex >= 0 && simpleSelectedFieldIndex < simpleFieldModel.count) {
+                previousFieldName = String(simpleFieldModel.get(simpleSelectedFieldIndex).sqlName || "")
+            }
+
+            var cols = activeTableColumns()
+            simpleFieldModel.clear()
+            for (var i = 0; i < cols.length; i++) {
+                var colName = String((cols[i] && cols[i].name) ? cols[i].name : "")
+                if (colName.length === 0) continue
+                var colType = String((cols[i] && cols[i].type) ? cols[i].type : "")
+                simpleFieldModel.append({
+                    "label": colName,
+                    "sqlName": colName,
+                    "sqlType": colType
+                })
+            }
+
+            if (simpleFieldModel.count === 0) {
+                simpleSelectedFieldIndex = -1
+                return
+            }
+
+            var nextIndex = 0
+            if (previousFieldName.length > 0) {
+                for (var idx = 0; idx < simpleFieldModel.count; idx++) {
+                    if (String(simpleFieldModel.get(idx).sqlName || "") === previousFieldName) {
+                        nextIndex = idx
+                        break
+                    }
+                }
+            }
+            simpleSelectedFieldIndex = nextIndex
+        }
+
         readonly property var currentTabItem: (appTabs.currentIndex >= 0 && appTabs.currentIndex < tabModel.count)
             ? tabModel.get(appTabs.currentIndex)
             : null
@@ -1444,6 +1530,13 @@ ApplicationWindow {
             return String(simpleFieldModel.get(simpleSelectedFieldIndex).sqlName || "column_name")
         }
 
+        function currentSimpleFieldSqlType() {
+            if (simpleSelectedFieldIndex < 0 || simpleSelectedFieldIndex >= simpleFieldModel.count) {
+                return ""
+            }
+            return String(simpleFieldModel.get(simpleSelectedFieldIndex).sqlType || "").toLowerCase()
+        }
+
         function currentSimpleOperatorSql() {
             if (simpleSelectedOperatorIndex < 0 || simpleSelectedOperatorIndex >= simpleOperatorModel.count) {
                 return "="
@@ -1466,26 +1559,57 @@ ApplicationWindow {
         }
 
         function buildSimpleWhereClause() {
-            var fieldSql = quoteIdentifier(currentSimpleFieldSqlName())
+            if (simpleFieldModel.count <= 0) return ""
+            var fieldSqlBase = quoteIdentifier(currentSimpleFieldSqlName())
+            var fieldSqlType = currentSimpleFieldSqlType()
             var opSql = currentSimpleOperatorSql()
             if (!currentSimpleOperatorNeedsValue()) {
-                return fieldSql + " " + opSql
+                return fieldSqlBase + " " + opSql
             }
             var valueText = String(simpleValue || "")
+            if (valueText.trim().length === 0) {
+                return ""
+            }
+            var fieldSql = fieldSqlBase
+            if (currentSimpleOperatorUsesPattern() || fieldSqlType.indexOf("uuid") !== -1) {
+                fieldSql = fieldSqlBase + "::text"
+            }
             if (currentSimpleOperatorUsesPattern()) {
                 valueText = "%" + valueText + "%"
             }
             return fieldSql + " " + opSql + " " + quoteSqlStringLiteral(valueText)
         }
 
+        function normalizedManualWhereClause(rawText) {
+            var clause = String(rawText || "").trim()
+            while (clause.endsWith(";")) {
+                clause = clause.slice(0, clause.length - 1).trim()
+            }
+            if (/^where\b/i.test(clause)) {
+                clause = clause.replace(/^where\s+/i, "")
+            }
+            return clause.trim()
+        }
+
+        function buildDraftWhereClause() {
+            if (filterMode === "manual") {
+                return normalizedManualWhereClause(manualWhereText)
+            }
+            return buildSimpleWhereClause()
+        }
+
+        function applyCurrentFilters() {
+            var loader = activeTableLoader()
+            if (!loader || !loader.item || !loader.item.loadData) return
+            var whereClause = buildDraftWhereClause()
+            loader.item.appliedFilterClause = whereClause
+            loader.item.pageIndex = 0
+            loader.item.loadData()
+        }
+
         function buildPreviewFilterQuery() {
             var query = "SELECT *\nFROM " + quoteIdentifier(currentSchemaName) + "." + quoteIdentifier(currentTableName)
-            var whereClause = ""
-            if (filterMode === "manual") {
-                whereClause = String(manualWhereText || "").trim()
-            } else {
-                whereClause = buildSimpleWhereClause()
-            }
+            var whereClause = buildDraftWhereClause()
             if (whereClause.length > 0) {
                 query += "\nWHERE " + whereClause
             }
@@ -1500,12 +1624,17 @@ ApplicationWindow {
             manualWhereText = ""
         }
 
+        function clearAppliedFilters() {
+            resetDraftFilters()
+            var loader = activeTableLoader()
+            if (!loader || !loader.item || !loader.item.loadData) return
+            loader.item.appliedFilterClause = ""
+            loader.item.pageIndex = 0
+            loader.item.loadData()
+        }
+
         ListModel {
             id: simpleFieldModel
-            ListElement { label: "id"; sqlName: "id" }
-            ListElement { label: "name"; sqlName: "name" }
-            ListElement { label: "status"; sqlName: "status" }
-            ListElement { label: "created_at"; sqlName: "created_at" }
         }
 
         ListModel {
@@ -1518,6 +1647,30 @@ ApplicationWindow {
             ListElement { label: "less than"; sql: "<"; needsValue: true; usesPattern: false }
             ListElement { label: "is null"; sql: "IS NULL"; needsValue: false; usesPattern: false }
             ListElement { label: "is not null"; sql: "IS NOT NULL"; needsValue: false; usesPattern: false }
+        }
+
+        onVisibleChanged: {
+            if (visible) {
+                syncSimpleFieldModelFromActiveTable()
+                deferredFieldSyncTimer.restart()
+            }
+        }
+
+        Timer {
+            id: deferredFieldSyncTimer
+            interval: 120
+            repeat: false
+            onTriggered: rightFiltersDrawer.syncSimpleFieldModelFromActiveTable()
+        }
+
+        Connections {
+            target: appTabs
+            function onCurrentIndexChanged() {
+                if (rightFiltersDrawer.visible) {
+                    rightFiltersDrawer.syncSimpleFieldModelFromActiveTable()
+                    deferredFieldSyncTimer.restart()
+                }
+            }
         }
 
         background: Rectangle {
@@ -1761,7 +1914,9 @@ ApplicationWindow {
                                 textRole: "label"
                                 valueRole: "sqlName"
                                 model: simpleFieldModel
-                                currentIndex: Math.max(0, Math.min(simpleFieldModel.count - 1, rightFiltersDrawer.simpleSelectedFieldIndex))
+                                currentIndex: simpleFieldModel.count > 0
+                                    ? Math.max(0, Math.min(simpleFieldModel.count - 1, rightFiltersDrawer.simpleSelectedFieldIndex))
+                                    : -1
                                 onCurrentIndexChanged: {
                                     if (currentIndex >= 0) {
                                         rightFiltersDrawer.simpleSelectedFieldIndex = currentIndex
@@ -2019,6 +2174,7 @@ ApplicationWindow {
                         text: "Apply filters"
                         isPrimary: true
                         accentColor: rightFiltersDrawer.accentColor
+                        onClicked: rightFiltersDrawer.applyCurrentFilters()
                     }
 
                     Item { Layout.fillWidth: true }
@@ -2028,7 +2184,7 @@ ApplicationWindow {
                         isPrimary: false
                         isOutline: true
                         accentColor: rightFiltersDrawer.accentColor
-                        onClicked: rightFiltersDrawer.resetDraftFilters()
+                        onClicked: rightFiltersDrawer.clearAppliedFilters()
                     }
                 }
             }

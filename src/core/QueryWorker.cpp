@@ -94,7 +94,7 @@ void QueryWorker::runSql(const QVariantMap& connectionInfo, const QString& query
     emit sqlFinished(requestTag, result);
 }
 
-void QueryWorker::runDataset(const QVariantMap& connectionInfo, const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending, const QString& requestTag)
+void QueryWorker::runDataset(const QVariantMap& connectionInfo, const QString& schema, const QString& table, int limit, int offset, const QString& sortColumn, bool sortAscending, const QString& requestTag, const QString& filterClause)
 {
     if (!m_addonHost) {
         emit datasetError(requestTag, "AddonHost indisponível.");
@@ -133,6 +133,7 @@ void QueryWorker::runDataset(const QVariantMap& connectionInfo, const QString& s
     request.hasSort = !sortColumn.isEmpty();
     request.sortColumn = sortColumn;
     request.sortAscending = sortAscending;
+    request.filter = filterClause;
     DatasetPage page = queryProvider->getDataset(schema, table, request);
     if (!page.warning.isEmpty() && page.columns.empty()) {
         emit datasetError(requestTag, page.warning);

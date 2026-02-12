@@ -356,6 +356,11 @@ DatasetPage PostgresQueryProvider::getDataset(const QString& schema, const QStri
     QString sql = QString("SELECT * FROM %1.%2")
                       .arg(quoteIdentifier(schema), quoteIdentifier(table));
 
+    const QString filterClause = req.filter.trimmed();
+    if (!filterClause.isEmpty()) {
+        sql += QString(" WHERE %1").arg(filterClause);
+    }
+
     if (req.hasSort && !req.sortColumn.isEmpty() && sqlTypeByColumn.contains(req.sortColumn)) {
         sql += QString(" ORDER BY %1 %2")
             .arg(quoteIdentifier(req.sortColumn), req.sortAscending ? "ASC" : "DESC");
