@@ -221,8 +221,6 @@ Rectangle {
                 }
 
                 onSortRequested: (columnIndex, ascending) => {
-                    root.sortedColumnIndex = columnIndex
-                    root.sortAscending = ascending
                     root.sortRequested(columnIndex, ascending)
                 }
 

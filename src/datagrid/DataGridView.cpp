@@ -422,6 +422,9 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
 
     const double x = event->position().x();
     const double y = event->position().y();
+    const int effectiveSortedColumn = (m_sortedColumnIndex >= 0 && m_sortedColumnIndex < m_engine->columnCount())
+        ? m_sortedColumnIndex
+        : -1;
 
     if (event->button() == Qt::LeftButton) {
         const int rowHandle = rowResizeHandleAt(x, y);
@@ -486,7 +489,7 @@ void DataGridView::mousePressEvent(QMouseEvent* event)
 
         const int col = columnAtPosition(x);
         if (col != -1) {
-            const bool nextAscending = (m_sortedColumnIndex == col) ? !m_sortAscending : true;
+            const bool nextAscending = (effectiveSortedColumn == col) ? !m_sortAscending : true;
             setSortedColumnIndex(col);
             setSortAscending(nextAscending);
             emit sortRequested(col, nextAscending);
@@ -661,9 +664,6 @@ void DataGridView::setEngine(DataGridEngine* engine)
 
 void DataGridView::onEngineUpdated()
 {
-    if (!m_engine || m_sortedColumnIndex >= m_engine->columnCount()) {
-        setSortedColumnIndex(-1);
-    }
     syncRowOverridesWithEngine();
     clampScrollOffsets();
     emit contentSizeChanged();
@@ -1018,6 +1018,7 @@ void DataGridView::paint(QPainter* painter)
 
                 QColor arrowColor = m_resizeGuideColor;
                 arrowColor.setAlphaF(arrowOpacity);
+                painter->save();
                 painter->setPen(Qt::NoPen);
                 painter->setBrush(arrowColor);
 
@@ -1033,6 +1034,7 @@ void DataGridView::paint(QPainter* painter)
                 }
                 arrowPath.closeSubpath();
                 painter->drawPath(arrowPath);
+                painter->restore();
             }
         }
         currentX += colW;
