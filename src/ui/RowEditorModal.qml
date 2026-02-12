@@ -37,6 +37,10 @@ Popup {
                                                      1.0)
     readonly property string fullTableName: (root.schemaName.length > 0 ? root.schemaName + "." : "") + root.tableName
     readonly property int fieldCount: fieldsModel.count
+    property int expandedFieldIndex: -1
+    property string expandedFieldName: ""
+    property string expandedFieldType: ""
+    property string expandedFieldValue: ""
 
     signal submitRequested(var entries)
 
@@ -168,6 +172,36 @@ Popup {
             }
         }
         return false
+    }
+
+    function isMultilineColumnType(typeName) {
+        var normalized = String(typeName === null || typeName === undefined ? "" : typeName).trim().toLowerCase()
+        return normalized === "text" || normalized.endsWith(".text")
+    }
+
+    function openExpandedTextEditor(fieldIndex) {
+        if (fieldIndex < 0 || fieldIndex >= fieldsModel.count) return
+        var row = fieldsModel.get(fieldIndex)
+        expandedFieldIndex = fieldIndex
+        expandedFieldName = row.name || ""
+        expandedFieldType = row.type || ""
+        expandedFieldValue = row.value === null || row.value === undefined ? "" : String(row.value)
+        expandedTextInput.text = expandedFieldValue
+        expandedTextPopup.open()
+        Qt.callLater(function() {
+            expandedTextInput.forceActiveFocus()
+            expandedTextInput.cursorPosition = expandedTextInput.text.length
+        })
+    }
+
+    function applyExpandedTextEditor() {
+        if (expandedFieldIndex < 0 || expandedFieldIndex >= fieldsModel.count) {
+            expandedTextPopup.close()
+            return
+        }
+        fieldsModel.setProperty(expandedFieldIndex, "value", expandedTextInput.text)
+        expandedFieldValue = expandedTextInput.text
+        expandedTextPopup.close()
     }
 
     function clearAllValues() {
@@ -489,6 +523,7 @@ Popup {
                             model: fieldsModel
 
                             Rectangle {
+                                id: fieldCard
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignTop
                                 Layout.preferredWidth: fieldsGrid.columns > 1
@@ -498,9 +533,14 @@ Popup {
                                 color: Theme.surface
                                 border.width: 0
                                 implicitHeight: fieldCardContent.implicitHeight + (Theme.spacingMedium * 2)
+                                readonly property bool useMultilineEditor: root.isMultilineColumnType(model.type)
 
                                 function focusEditor() {
-                                    valueInput.forceActiveFocus()
+                                    if (singleLineInput.visible) {
+                                        singleLineInput.forceActiveFocus()
+                                    } else if (multiLineInput.visible) {
+                                        multiLineInput.forceActiveFocus()
+                                    }
                                 }
 
                                 ColumnLayout {
@@ -556,14 +596,106 @@ Popup {
                                     }
 
                                     AppTextField {
-                                        id: valueInput
+                                        id: singleLineInput
                                         Layout.fillWidth: true
+                                        visible: !fieldCard.useMultilineEditor
                                         accentColor: root.accentColor
                                         enabled: !root.submitting
                                         placeholderText: model.defaultValue || ""
                                         text: model.value
                                         onTextChanged: {
                                             fieldsModel.setProperty(index, "value", text)
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        id: multiLineFieldBox
+                                        Layout.fillWidth: true
+                                        visible: fieldCard.useMultilineEditor
+                                        implicitHeight: 110
+                                        color: Theme.surface
+                                        border.color: multiLineInput.activeFocus ? root.accentColor : Theme.border
+                                        border.width: 1
+                                        radius: Theme.radius
+
+                                        TextArea {
+                                            id: multiLineInput
+                                            anchors.fill: parent
+                                            anchors.margins: 1
+                                            anchors.rightMargin: 28
+                                            enabled: !root.submitting
+                                            text: model.value
+                                            placeholderText: model.defaultValue || ""
+                                            color: Theme.textPrimary
+                                            selectByMouse: true
+                                            wrapMode: TextEdit.Wrap
+                                            leftPadding: 10
+                                            rightPadding: 8
+                                            topPadding: 8
+                                            bottomPadding: 8
+                                            selectionColor: root.accentColor
+                                            selectedTextColor: "#FFFFFF"
+                                            font.pixelSize: 13
+                                            background: Rectangle { color: "transparent" }
+                                            onTextChanged: {
+                                                fieldsModel.setProperty(index, "value", text)
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            id: expandButton
+                                            width: 20
+                                            height: 20
+                                            radius: 5
+                                            anchors.top: parent.top
+                                            anchors.right: parent.right
+                                            anchors.topMargin: 6
+                                            anchors.rightMargin: 6
+                                            color: expandMouseArea.containsMouse
+                                                ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
+                                                : Qt.rgba(Theme.textSecondary.r, Theme.textSecondary.g, Theme.textSecondary.b, 0.08)
+                                            border.width: 1
+                                            border.color: expandMouseArea.containsMouse
+                                                ? Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.45)
+                                                : Theme.border
+
+                                            Canvas {
+                                                id: expandIconCanvas
+                                                anchors.fill: parent
+                                                anchors.margins: 4
+                                                onPaint: {
+                                                    var ctx = getContext("2d")
+                                                    ctx.clearRect(0, 0, width, height)
+                                                    ctx.lineWidth = 1.4
+                                                    ctx.strokeStyle = expandMouseArea.containsMouse ? root.accentColor : Theme.textSecondary
+                                                    ctx.lineCap = "round"
+                                                    ctx.lineJoin = "round"
+
+                                                    ctx.beginPath()
+                                                    ctx.moveTo(2, 6)
+                                                    ctx.lineTo(2, 2)
+                                                    ctx.lineTo(6, 2)
+                                                    ctx.moveTo(8, 12)
+                                                    ctx.lineTo(12, 12)
+                                                    ctx.lineTo(12, 8)
+                                                    ctx.moveTo(2, 2)
+                                                    ctx.lineTo(6, 6)
+                                                    ctx.moveTo(12, 12)
+                                                    ctx.lineTo(8, 8)
+                                                    ctx.stroke()
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                id: expandMouseArea
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                enabled: !root.submitting
+                                                cursorShape: Qt.PointingHandCursor
+                                                onEntered: expandIconCanvas.requestPaint()
+                                                onExited: expandIconCanvas.requestPaint()
+                                                onClicked: root.openExpandedTextEditor(index)
+                                            }
                                         }
                                     }
                                 }
@@ -647,6 +779,155 @@ Popup {
                         accentColor: root.accentColor
                         enabled: !root.submitting
                         onClicked: root.requestSubmit()
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: expandedTextPopup
+        parent: Overlay.overlay
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+        width: {
+            if (!parent) return 920
+            return Math.min(980, Math.max(520, parent.width - (Theme.spacingXLarge * 2)))
+        }
+        height: {
+            if (!parent) return 620
+            return Math.min(700, Math.max(360, parent.height - (Theme.spacingXLarge * 2)))
+        }
+        x: Math.round((parent.width - width) / 2)
+        y: Math.round((parent.height - height) / 2)
+        padding: 0
+
+        background: Rectangle {
+            color: Theme.surface
+            border.color: Theme.border
+            border.width: 1
+            radius: 10
+        }
+
+        contentItem: ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Rectangle {
+                Layout.fillWidth: true
+                color: Theme.surfaceHighlight
+                border.color: Theme.border
+                border.width: 1
+                implicitHeight: expandedHeader.implicitHeight + (Theme.spacingLarge * 2)
+
+                RowLayout {
+                    id: expandedHeader
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacingLarge
+                    spacing: Theme.spacingMedium
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingSmall
+
+                            Text {
+                                text: expandedFieldName
+                                color: Theme.textPrimary
+                                font.pixelSize: 16
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: expandedFieldType
+                                visible: text.length > 0
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                            }
+
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Expanded text editor"
+                            color: Theme.textSecondary
+                            font.pixelSize: 12
+                        }
+                    }
+
+                    AppButton {
+                        text: "Close"
+                        isPrimary: false
+                        enabled: !root.submitting
+                        onClicked: expandedTextPopup.close()
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: Theme.surface
+                border.color: Theme.border
+                border.width: 1
+
+                TextArea {
+                    id: expandedTextInput
+                    anchors.fill: parent
+                    enabled: !root.submitting
+                    wrapMode: TextEdit.Wrap
+                    selectByMouse: true
+                    color: Theme.textPrimary
+                    selectionColor: root.accentColor
+                    selectedTextColor: "#FFFFFF"
+                    leftPadding: Theme.spacingLarge
+                    rightPadding: Theme.spacingLarge
+                    topPadding: Theme.spacingLarge
+                    bottomPadding: Theme.spacingLarge
+                    font.pixelSize: 14
+                    background: Rectangle {
+                        color: "transparent"
+                    }
+                    onTextChanged: {
+                        root.expandedFieldValue = text
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                color: Theme.surface
+                border.color: Theme.border
+                border.width: 1
+                implicitHeight: expandedFooter.implicitHeight + (Theme.spacingLarge * 2)
+
+                RowLayout {
+                    id: expandedFooter
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacingLarge
+                    spacing: Theme.spacingMedium
+
+                    Item { Layout.fillWidth: true }
+
+                    AppButton {
+                        text: "Cancel"
+                        isPrimary: false
+                        enabled: !root.submitting
+                        onClicked: expandedTextPopup.close()
+                    }
+
+                    AppButton {
+                        text: "Apply"
+                        isPrimary: true
+                        accentColor: root.accentColor
+                        enabled: !root.submitting
+                        onClicked: root.applyExpandedTextEditor()
                     }
                 }
             }
