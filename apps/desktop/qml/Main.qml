@@ -11,6 +11,7 @@ ApplicationWindow {
     width: 1024
     height: 768
     visible: true
+    visibility: Window.Maximized
     title: qsTr("Sofa Studio")
     color: "transparent"
     flags: Qt.FramelessWindowHint | Qt.Window
