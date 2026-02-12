@@ -162,6 +162,9 @@ ApplicationWindow {
         function onActiveConnectionIdChanged() { 
             // If connection closed (id == -1), close all tabs except Home
             if (App.activeConnectionId === -1) {
+                if (rightFiltersDrawer.visible) {
+                    rightFiltersDrawer.close()
+                }
                 // Iterate backwards to avoid index issues when removing
                 for (var i = tabModel.count - 1; i >= 0; i--) {
                     if (tabModel.get(i).type !== "home") {
