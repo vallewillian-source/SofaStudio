@@ -35,6 +35,8 @@ qt_add_qml_module(SofaUI
         RowEditorModal.qml
         TableStructureView.qml
         ColumnEditorModal.qml
+        TableIndexesView.qml
+        IndexEditorModal.qml
         PostgresDdl.js
     RESOURCES
         assets/table-list-solid-full.svg

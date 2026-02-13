@@ -15,9 +15,38 @@ function fullTable(schema, table) {
     return quoteIdent(s) + "." + quoteIdent(t)
 }
 
+function fullIndex(schema, indexName) {
+    var s = String(schema === undefined || schema === null ? "" : schema)
+    var i = String(indexName === undefined || indexName === null ? "" : indexName)
+    if (s.length === 0) {
+        return quoteIdent(i)
+    }
+    return quoteIdent(s) + "." + quoteIdent(i)
+}
+
 function normalizeSqlExpr(value) {
     if (value === undefined || value === null) return ""
     return String(value).trim()
+}
+
+function normalizeLines(value) {
+    if (value === undefined || value === null) return []
+    if (Array.isArray(value)) {
+        var arr = []
+        for (var i = 0; i < value.length; i++) {
+            var item = String(value[i] === undefined || value[i] === null ? "" : value[i]).trim()
+            if (item.length > 0) arr.push(item)
+        }
+        return arr
+    }
+    var text = String(value)
+    var rawLines = text.split("\n")
+    var lines = []
+    for (var j = 0; j < rawLines.length; j++) {
+        var line = String(rawLines[j]).trim()
+        if (line.length > 0) lines.push(line)
+    }
+    return lines
 }
 
 function arraysEqual(left, right) {
@@ -199,4 +228,120 @@ function buildDropColumnStatements(payload) {
 
     stmts.push("ALTER TABLE " + fullTable(schema, table) + " DROP COLUMN " + quoteIdent(columnName))
     return stmts
+}
+
+function buildCreateIndexStatements(payload) {
+    var schema = payload.schema
+    var table = payload.table
+    var indexName = String(payload.name || "").trim()
+    var method = String(payload.method || "btree").trim().toLowerCase()
+    var isUnique = payload.isUnique === true
+    var keyItems = normalizeLines(payload.keyItems)
+    var includeItems = normalizeLines(payload.includeItems)
+    var predicate = normalizeSqlExpr(payload.predicate)
+    var advancedTailSql = normalizeSqlExpr(payload.advancedTailSql)
+
+    if (indexName.length === 0 || method.length === 0 || keyItems.length === 0) {
+        return []
+    }
+
+    var stmt = "CREATE "
+        + (isUnique ? "UNIQUE " : "")
+        + "INDEX " + quoteIdent(indexName)
+        + " ON " + fullTable(schema, table)
+        + " USING " + method
+        + " (" + keyItems.join(", ") + ")"
+
+    if (includeItems.length > 0) {
+        stmt += " INCLUDE (" + includeItems.join(", ") + ")"
+    }
+    if (predicate.length > 0) {
+        stmt += " WHERE " + predicate
+    }
+    if (advancedTailSql.length > 0) {
+        stmt += " " + advancedTailSql
+    }
+
+    return [stmt]
+}
+
+function buildEditIndexStatements(payload) {
+    if (payload.isConstraintBacked === true) {
+        return []
+    }
+
+    var schema = payload.schema
+    var table = payload.table
+    var originalName = String(payload.originalName || "").trim()
+    var nextName = String(payload.name || "").trim()
+    if (originalName.length === 0 || nextName.length === 0) {
+        return []
+    }
+
+    var originalMethod = String(payload.originalMethod || "").trim().toLowerCase()
+    var nextMethod = String(payload.method || "").trim().toLowerCase()
+    var originalUnique = payload.originalIsUnique === true
+    var nextUnique = payload.isUnique === true
+    var originalKeys = normalizeLines(payload.originalKeyItems)
+    var nextKeys = normalizeLines(payload.keyItems)
+    var originalInclude = normalizeLines(payload.originalIncludeItems)
+    var nextInclude = normalizeLines(payload.includeItems)
+    var originalPredicate = normalizeSqlExpr(payload.originalPredicate)
+    var nextPredicate = normalizeSqlExpr(payload.predicate)
+    var originalTail = normalizeSqlExpr(payload.originalAdvancedTailSql)
+    var nextTail = normalizeSqlExpr(payload.advancedTailSql)
+
+    if (nextMethod.length === 0 || nextKeys.length === 0) {
+        return []
+    }
+
+    var unchanged =
+        originalName === nextName
+        && originalMethod === nextMethod
+        && originalUnique === nextUnique
+        && arraysEqual(originalKeys, nextKeys)
+        && arraysEqual(originalInclude, nextInclude)
+        && originalPredicate === nextPredicate
+        && originalTail === nextTail
+
+    if (unchanged) {
+        return []
+    }
+
+    var onlyNameChanged =
+        originalName !== nextName
+        && originalMethod === nextMethod
+        && originalUnique === nextUnique
+        && arraysEqual(originalKeys, nextKeys)
+        && arraysEqual(originalInclude, nextInclude)
+        && originalPredicate === nextPredicate
+        && originalTail === nextTail
+
+    if (onlyNameChanged) {
+        return [
+            "ALTER INDEX " + fullIndex(schema, originalName) + " RENAME TO " + quoteIdent(nextName)
+        ]
+    }
+
+    var createStatements = buildCreateIndexStatements(payload)
+    if (createStatements.length === 0) {
+        return []
+    }
+
+    return [
+        "DROP INDEX " + fullIndex(schema, originalName),
+        createStatements[0]
+    ]
+}
+
+function buildDropIndexStatements(payload) {
+    if (payload.isConstraintBacked === true) {
+        return []
+    }
+    var schema = payload.schema
+    var indexName = String(payload.indexName || "").trim()
+    if (indexName.length === 0) return []
+    return [
+        "DROP INDEX " + fullIndex(schema, indexName)
+    ]
 }

@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QHash>
 #include <QSet>
+#include <QRegularExpression>
 
 namespace Sofa::Addons::Postgres {
 namespace {
@@ -67,6 +68,28 @@ bool isMultilineInputPostgresType(const QString& rawType)
         || t == "array"
         || t.endsWith("[]")
         || t.startsWith("_");
+}
+
+QString extractAdvancedTailFromIndexDef(const QString& definitionSql)
+{
+    const QString def = definitionSql.trimmed();
+    if (def.isEmpty()) return QString();
+
+    const QRegularExpression tokenRe(
+        QStringLiteral("(NULLS\\s+NOT\\s+DISTINCT|WITH\\s*\\([^)]*\\)|TABLESPACE\\s+[^\\s]+)"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+
+    QStringList tokens;
+    QRegularExpressionMatchIterator it = tokenRe.globalMatch(def);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch match = it.next();
+        const QString token = match.captured(1).trimmed();
+        if (!token.isEmpty()) {
+            tokens.append(token);
+        }
+    }
+
+    return tokens.join(' ');
 }
 }
 
@@ -290,6 +313,90 @@ TableSchema PostgresCatalogProvider::getTableSchema(const QString& schema, const
         col.isPrimaryKey = primaryKeyColumns.contains(col.name);
     }
     return ts;
+}
+
+std::vector<TableIndex> PostgresCatalogProvider::getTableIndexes(const QString& schema, const QString& table)
+{
+    std::vector<TableIndex> indexes;
+
+    QSqlDatabase db = QSqlDatabase::database(m_connectionName);
+    if (!db.isOpen()) return indexes;
+
+    QSqlQuery q(db);
+    q.prepare(
+        "SELECT idx.relname AS index_name, "
+        "       am.amname AS method, "
+        "       i.indisunique, "
+        "       i.indisprimary, "
+        "       i.indisvalid, "
+        "       con.conname AS constraint_name, "
+        "       con.contype AS constraint_type, "
+        "       pg_get_indexdef(i.indexrelid, 0, true) AS definition_sql, "
+        "       pg_get_expr(i.indpred, i.indrelid, true) AS predicate, "
+        "       i.indnkeyatts, "
+        "       i.indnatts, "
+        "       i.indexrelid "
+        "FROM pg_index i "
+        "JOIN pg_class tbl ON tbl.oid = i.indrelid "
+        "JOIN pg_namespace ns ON ns.oid = tbl.relnamespace "
+        "JOIN pg_class idx ON idx.oid = i.indexrelid "
+        "JOIN pg_am am ON am.oid = idx.relam "
+        "LEFT JOIN pg_constraint con ON con.conindid = i.indexrelid "
+        "WHERE ns.nspname = :schema "
+        "  AND tbl.relname = :table "
+        "ORDER BY idx.relname"
+    );
+    q.bindValue(":schema", schema);
+    q.bindValue(":table", table);
+
+    if (!q.exec()) {
+        return indexes;
+    }
+
+    QSqlQuery itemQuery(db);
+    itemQuery.prepare("SELECT pg_get_indexdef(:index_oid, :item_no, true)");
+
+    while (q.next()) {
+        TableIndex idx;
+        idx.name = q.value(0).toString();
+        idx.method = q.value(1).toString();
+        idx.isUnique = q.value(2).toBool();
+        idx.isPrimary = q.value(3).toBool();
+        idx.isValid = q.value(4).toBool();
+        idx.constraintName = q.value(5).toString();
+        idx.constraintType = q.value(6).toString();
+        idx.definitionSql = q.value(7).toString();
+        idx.predicate = q.value(8).toString();
+        idx.advancedTailSql = extractAdvancedTailFromIndexDef(idx.definitionSql);
+        idx.isConstraintBacked = !idx.constraintName.trimmed().isEmpty();
+
+        const int keyCount = q.value(9).toInt();
+        const int totalCount = q.value(10).toInt();
+        const qulonglong indexOid = q.value(11).toULongLong();
+
+        if (indexOid > 0 && totalCount > 0) {
+            for (int itemNo = 1; itemNo <= totalCount; ++itemNo) {
+                itemQuery.bindValue(":index_oid", indexOid);
+                itemQuery.bindValue(":item_no", itemNo);
+                if (!itemQuery.exec() || !itemQuery.next()) {
+                    continue;
+                }
+                const QString itemExpr = itemQuery.value(0).toString().trimmed();
+                if (itemExpr.isEmpty()) {
+                    continue;
+                }
+                if (itemNo <= keyCount) {
+                    idx.keyItems.append(itemExpr);
+                } else {
+                    idx.includeItems.append(itemExpr);
+                }
+            }
+        }
+
+        indexes.push_back(idx);
+    }
+
+    return indexes;
 }
 
 // --- PostgresQueryProvider ---

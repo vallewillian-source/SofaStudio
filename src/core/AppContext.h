@@ -62,6 +62,7 @@ public:
     Q_INVOKABLE bool runQueryAsync(const QString& queryText, const QString& requestTag = "sql");
     Q_INVOKABLE bool getDatasetAsync(const QString& schema, const QString& table, int limit = 100, int offset = 0, const QString& sortColumn = QString(), bool sortAscending = true, const QString& requestTag = "table", const QString& filterClause = QString());
     Q_INVOKABLE bool getTableSchemaAsync(const QString& schema, const QString& table, const QString& requestTag = "schema");
+    Q_INVOKABLE bool getTableIndexesAsync(const QString& schema, const QString& table, const QString& requestTag = "indexes");
     Q_INVOKABLE void getCount(const QString& schema, const QString& table, const QString& requestTag);
     Q_INVOKABLE bool cancelActiveQuery();
     
@@ -88,6 +89,9 @@ signals:
     void tableSchemaStarted(const QString& requestTag);
     void tableSchemaFinished(const QString& requestTag, const QVariantMap& result);
     void tableSchemaError(const QString& requestTag, const QString& error);
+    void tableIndexesStarted(const QString& requestTag);
+    void tableIndexesFinished(const QString& requestTag, const QVariantMap& result);
+    void tableIndexesError(const QString& requestTag, const QString& error);
     void countFinished(const QString& requestTag, int total);
     void countError(const QString& requestTag, const QString& error);
 
@@ -122,6 +126,9 @@ private slots:
     void handleTableSchemaStarted(const QString& requestTag, int backendPid);
     void handleTableSchemaFinished(const QString& requestTag, const QVariantMap& result);
     void handleTableSchemaError(const QString& requestTag, const QString& error);
+    void handleTableIndexesStarted(const QString& requestTag, int backendPid);
+    void handleTableIndexesFinished(const QString& requestTag, const QVariantMap& result);
+    void handleTableIndexesError(const QString& requestTag, const QString& error);
     void handleCountFinished(const QString& requestTag, int total);
 
 };

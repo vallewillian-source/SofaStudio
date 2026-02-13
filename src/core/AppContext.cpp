@@ -58,6 +58,9 @@ AppContext::AppContext(std::shared_ptr<ICommandService> commandService,
     connect(m_worker, &QueryWorker::tableSchemaStarted, this, &AppContext::handleTableSchemaStarted);
     connect(m_worker, &QueryWorker::tableSchemaFinished, this, &AppContext::handleTableSchemaFinished);
     connect(m_worker, &QueryWorker::tableSchemaError, this, &AppContext::handleTableSchemaError);
+    connect(m_worker, &QueryWorker::tableIndexesStarted, this, &AppContext::handleTableIndexesStarted);
+    connect(m_worker, &QueryWorker::tableIndexesFinished, this, &AppContext::handleTableIndexesFinished);
+    connect(m_worker, &QueryWorker::tableIndexesError, this, &AppContext::handleTableIndexesError);
     connect(m_worker, &QueryWorker::countFinished, this, &AppContext::handleCountFinished);
     
     m_workerThread.start();
@@ -707,6 +710,42 @@ bool AppContext::getTableSchemaAsync(const QString& schema, const QString& table
     return true;
 }
 
+bool AppContext::getTableIndexesAsync(const QString& schema, const QString& table, const QString& requestTag)
+{
+    if (!m_currentConnection || !m_currentConnection->isOpen()) {
+        setLastError("Connection is not open.");
+        emit tableIndexesError(requestTag, m_lastError);
+        return false;
+    }
+    if (m_queryRunning) {
+        setLastError("A query is already running.");
+        emit tableIndexesError(requestTag, m_lastError);
+        return false;
+    }
+    if (!m_worker) {
+        setLastError("Worker unavailable.");
+        emit tableIndexesError(requestTag, m_lastError);
+        return false;
+    }
+    if (!m_activeConnectionInfo.contains("driverId")) {
+        setLastError("Connection configuration unavailable.");
+        emit tableIndexesError(requestTag, m_lastError);
+        return false;
+    }
+
+    m_queryRunning = true;
+    emit queryRunningChanged();
+    m_activeRequestTag = requestTag;
+    m_activeRequestType = "indexes";
+    m_activeBackendPid = -1;
+    QMetaObject::invokeMethod(m_worker, "runTableIndexes", Qt::QueuedConnection,
+                              Q_ARG(QVariantMap, m_activeConnectionInfo),
+                              Q_ARG(QString, schema),
+                              Q_ARG(QString, table),
+                              Q_ARG(QString, requestTag));
+    return true;
+}
+
 void AppContext::getCount(const QString& schema, const QString& table, const QString& requestTag)
 {
     if (!m_currentConnection || !m_currentConnection->isOpen()) {
@@ -844,6 +883,39 @@ void AppContext::handleTableSchemaError(const QString& requestTag, const QString
     m_activeRequestTag.clear();
     m_activeRequestType.clear();
     emit tableSchemaError(requestTag, cleanError);
+}
+
+void AppContext::handleTableIndexesStarted(const QString& requestTag, int backendPid)
+{
+    m_activeBackendPid = backendPid;
+    if (requestTag == m_activeRequestTag) {
+        emit tableIndexesStarted(requestTag);
+    }
+}
+
+void AppContext::handleTableIndexesFinished(const QString& requestTag, const QVariantMap& result)
+{
+    if (requestTag != m_activeRequestTag) return;
+    m_queryRunning = false;
+    emit queryRunningChanged();
+    setLastError("");
+    m_activeBackendPid = -1;
+    m_activeRequestTag.clear();
+    m_activeRequestType.clear();
+    emit tableIndexesFinished(requestTag, result);
+}
+
+void AppContext::handleTableIndexesError(const QString& requestTag, const QString& error)
+{
+    if (requestTag != m_activeRequestTag && !m_activeRequestTag.isEmpty()) return;
+    m_queryRunning = false;
+    emit queryRunningChanged();
+    const QString cleanError = sanitizeDriverErrorSuffix(error);
+    setLastError(cleanError);
+    m_activeBackendPid = -1;
+    m_activeRequestTag.clear();
+    m_activeRequestType.clear();
+    emit tableIndexesError(requestTag, cleanError);
 }
 
 void AppContext::handleCountFinished(const QString& requestTag, int total)

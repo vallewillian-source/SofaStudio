@@ -25,6 +25,7 @@ public:
     virtual std::vector<QString> listHiddenSchemas() { return {}; }
     virtual std::vector<CatalogTable> listTables(const QString& schema) = 0;
     virtual TableSchema getTableSchema(const QString& schema, const QString& table) = 0;
+    virtual std::vector<TableIndex> getTableIndexes(const QString& schema, const QString& table) { (void)schema; (void)table; return {}; }
 };
 
 class IQueryProvider {

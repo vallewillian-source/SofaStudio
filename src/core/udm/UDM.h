@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QStringList>
 #include <QVariant>
 #include <vector>
 #include <map>
@@ -36,6 +37,22 @@ struct TableSchema {
     QString name;
     QString primaryKeyConstraintName;
     std::vector<Column> columns;
+};
+
+struct TableIndex {
+    QString name;
+    QString method;
+    bool isUnique = false;
+    bool isPrimary = false;
+    bool isValid = true;
+    bool isConstraintBacked = false;
+    QString constraintName;
+    QString constraintType;
+    QString definitionSql;
+    QString predicate;
+    QStringList keyItems;
+    QStringList includeItems;
+    QString advancedTailSql;
 };
 
 struct CatalogTable {

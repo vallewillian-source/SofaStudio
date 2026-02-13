@@ -64,6 +64,20 @@ ApplicationWindow {
         appTabs.currentIndex = tabModel.count - 1
     }
 
+    function openIndexes(schema, tableName) {
+        var title = tableName + " · Indexes"
+        console.log("\u001b[36m📌 Abrindo aba\u001b[0m", "indexes", schema + "." + tableName)
+        for (var i = 0; i < tabModel.count; i++) {
+            var item = tabModel.get(i)
+            if (item.type === "indexes" && item.schema === schema && item.tableName === tableName) {
+                appTabs.currentIndex = i
+                return
+            }
+        }
+        tabModel.append({ "title": title, "type": "indexes", "schema": schema, "tableName": tableName })
+        appTabs.currentIndex = tabModel.count - 1
+    }
+
     function reloadOpenTableTabs(schema, tableName) {
         if (!contentStack) return
         var children = contentStack.children
@@ -356,7 +370,9 @@ ApplicationWindow {
                                     ? tableComponent
                                     : (itemType === "structure"
                                         ? structureComponent
-                                        : (itemType === "connection_form" ? connectionFormComponent : sqlComponent)))
+                                        : (itemType === "indexes"
+                                            ? indexesComponent
+                                            : (itemType === "connection_form" ? connectionFormComponent : sqlComponent))))
                             
                             onLoaded: {
                                 console.log("\u001b[36m🧭 Loader\u001b[0m", "index=" + index, "type=" + itemType, "schema=" + itemSchema, "table=" + itemTable)
@@ -373,6 +389,13 @@ ApplicationWindow {
                                     item.tableName = itemTable
                                     if (item.loadStructure) {
                                         item.loadStructure()
+                                    }
+                                }
+                                if (item && itemType === "indexes") {
+                                    item.schema = itemSchema
+                                    item.tableName = itemTable
+                                    if (item.loadIndexes) {
+                                        item.loadIndexes()
                                     }
                                 }
                                 if (item && itemType === "connection_form") {
@@ -552,6 +575,15 @@ ApplicationWindow {
     Component {
         id: structureComponent
         TableStructureView {
+            onRequestReloadTableData: (schema, tableName) => {
+                root.reloadOpenTableTabs(schema, tableName)
+            }
+        }
+    }
+
+    Component {
+        id: indexesComponent
+        TableIndexesView {
             onRequestReloadTableData: (schema, tableName) => {
                 root.reloadOpenTableTabs(schema, tableName)
             }
@@ -1050,7 +1082,7 @@ ApplicationWindow {
                         spacing: 4
                         opacity: 0.8
                         font.weight: Font.DemiBold
-                        onClicked: console.log("Indexes clicked")
+                        onClicked: root.openIndexes(tableRoot.schema, tableRoot.tableName)
                     }
 
                     Item { Layout.fillWidth: true }

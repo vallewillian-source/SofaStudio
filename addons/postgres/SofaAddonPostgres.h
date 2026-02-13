@@ -28,6 +28,7 @@ public:
     std::vector<QString> listHiddenSchemas() override;
     std::vector<CatalogTable> listTables(const QString& schema) override;
     TableSchema getTableSchema(const QString& schema, const QString& table) override;
+    std::vector<TableIndex> getTableIndexes(const QString& schema, const QString& table) override;
 
 private:
     QString m_connectionName;

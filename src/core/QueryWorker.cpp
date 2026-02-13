@@ -77,6 +77,34 @@ QVariantMap QueryWorker::tableSchemaToVariant(const TableSchema& schema)
     return result;
 }
 
+QVariantMap QueryWorker::tableIndexesToVariant(const QString& schema, const QString& table, const std::vector<TableIndex>& indexes)
+{
+    QVariantMap result;
+    result["schema"] = schema;
+    result["table"] = table;
+
+    QVariantList list;
+    for (const auto& idx : indexes) {
+        QVariantMap item;
+        item["name"] = idx.name;
+        item["method"] = idx.method;
+        item["isUnique"] = idx.isUnique;
+        item["isPrimary"] = idx.isPrimary;
+        item["isValid"] = idx.isValid;
+        item["isConstraintBacked"] = idx.isConstraintBacked;
+        item["constraintName"] = idx.constraintName;
+        item["constraintType"] = idx.constraintType;
+        item["definitionSql"] = idx.definitionSql;
+        item["predicate"] = idx.predicate;
+        item["keyItems"] = idx.keyItems;
+        item["includeItems"] = idx.includeItems;
+        item["advancedTailSql"] = idx.advancedTailSql;
+        list.append(item);
+    }
+    result["indexes"] = list;
+    return result;
+}
+
 void QueryWorker::runSql(const QVariantMap& connectionInfo, const QString& queryText, const QString& requestTag)
 {
     if (!m_addonHost) {
@@ -211,6 +239,50 @@ void QueryWorker::runTableSchema(const QVariantMap& connectionInfo, const QStrin
     TableSchema ts = catalog->getTableSchema(schema, table);
     QVariantMap result = tableSchemaToVariant(ts);
     emit tableSchemaFinished(requestTag, result);
+}
+
+void QueryWorker::runTableIndexes(const QVariantMap& connectionInfo, const QString& schema, const QString& table, const QString& requestTag)
+{
+    if (!m_addonHost) {
+        emit tableIndexesError(requestTag, "AddonHost indisponível.");
+        return;
+    }
+
+    QString driverId = connectionInfo.value("driverId").toString();
+    if (!m_addonHost->hasAddon(driverId)) {
+        emit tableIndexesError(requestTag, "Driver indisponível: " + driverId);
+        return;
+    }
+
+    auto addon = m_addonHost->getAddon(driverId);
+    auto connection = addon->createConnection();
+
+    QString host = connectionInfo.value("host").toString();
+    int port = connectionInfo.value("port", 5432).toInt();
+    QString database = connectionInfo.value("database").toString();
+    QString user = connectionInfo.value("user").toString();
+    QString password = connectionInfo.value("password").toString();
+
+    if (!connection->open(host, port, database, user, password)) {
+        emit tableIndexesError(requestTag, connection->lastError());
+        return;
+    }
+
+    int backendPid = -1;
+    if (auto queryProvider = connection->query()) {
+        backendPid = queryProvider->backendPid();
+    }
+    emit tableIndexesStarted(requestTag, backendPid);
+
+    auto catalog = connection->catalog();
+    if (!catalog) {
+        emit tableIndexesError(requestTag, "Catalog provider indisponível.");
+        return;
+    }
+
+    std::vector<TableIndex> indexes = catalog->getTableIndexes(schema, table);
+    QVariantMap result = tableIndexesToVariant(schema, table, indexes);
+    emit tableIndexesFinished(requestTag, result);
 }
 
 void QueryWorker::runCount(const QVariantMap& connectionInfo, const QString& schema, const QString& table, const QString& requestTag) {
