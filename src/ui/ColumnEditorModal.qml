@@ -10,11 +10,11 @@ Popup {
     width: {
         if (!parent) return 720
         var maxAllowed = Math.max(420, parent.width - (Theme.spacingXLarge * 2))
-        return Math.min(820, maxAllowed)
+        return Math.min(680, maxAllowed)
     }
     height: {
         if (!parent) return 640
-        return Math.min(720, parent.height - (Theme.spacingXLarge * 2))
+        return Math.min(600, parent.height - (Theme.spacingXLarge * 2))
     }
     x: Math.round((parent.width - width) / 2)
     y: Math.max(Theme.spacingXLarge, Math.round((parent.height - height) / 2))
@@ -125,8 +125,47 @@ Popup {
 
     function previewSqlText() {
         var stmts = buildPreviewStatements()
-        if (!stmts || stmts.length === 0) return ""
+        if (!stmts || stmts.length === 0) return "-- No changes detected"
         return stmts.map((s) => s + ";").join("\n")
+    }
+
+    function resetDraftValues() {
+        if (editing) {
+            nameValue = originalName
+            typeValue = originalType
+            primaryKeyValue = originalPrimaryKey
+            nullableValue = originalPrimaryKey ? false : originalNullable
+            defaultExprValue = originalDefaultExpr
+        } else {
+            nameValue = ""
+            typeValue = ""
+            primaryKeyValue = false
+            nullableValue = true
+            defaultExprValue = ""
+        }
+    }
+
+    function requestSubmit() {
+        var payload = {
+            mode: root.editing ? "edit" : "add",
+            schema: root.schemaName,
+            table: root.tableName,
+            primaryKeyConstraintName: root.primaryKeyConstraintName,
+            existingPkColumns: root.existingPkColumns,
+            name: root.nameValue,
+            type: root.typeValue,
+            nullable: root.effectiveNullable(),
+            defaultExpr: root.defaultExprValue,
+            primaryKey: root.primaryKeyValue,
+            originalName: root.originalName,
+            originalType: root.originalType,
+            originalNullable: root.originalNullable,
+            originalDefaultExpr: root.originalDefaultExpr,
+            originalPrimaryKey: root.originalPrimaryKey
+        }
+        root.errorMessage = ""
+        root.submitting = true
+        root.submitRequested(payload)
     }
 
     background: Rectangle {
@@ -142,69 +181,112 @@ Popup {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 56
-            color: Theme.surface
+            color: Theme.surfaceHighlight
             border.color: Theme.border
             border.width: 1
+            implicitHeight: headerContent.implicitHeight + (Theme.spacingLarge * 2)
 
-            RowLayout {
+            ColumnLayout {
+                id: headerContent
                 anchors.fill: parent
-                anchors.leftMargin: Theme.spacingLarge
-                anchors.rightMargin: Theme.spacingLarge
+                anchors.margins: Theme.spacingLarge
                 spacing: Theme.spacingMedium
 
-                ColumnLayout {
+                RowLayout {
                     Layout.fillWidth: true
-                    spacing: 2
+                    spacing: Theme.spacingMedium
 
-                    Text {
-                        text: root.editing ? "Edit column" : "Add column"
-                        color: Theme.textPrimary
-                        font.pixelSize: 14
-                        font.bold: true
-                        elide: Text.ElideRight
+                    Rectangle {
+                        Layout.preferredWidth: 30
+                        Layout.preferredHeight: 30
+                        radius: 15
+                        color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.2)
+                        border.color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.45)
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "+"
+                            color: root.accentColor
+                            font.bold: true
+                            font.pixelSize: 16
+                        }
                     }
 
-                    Text {
-                        text: (schemaName.length > 0 ? schemaName + "." : "") + tableName
-                        color: Theme.textSecondary
-                        font.pixelSize: 11
-                        elide: Text.ElideRight
-                    }
-                }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
 
-                AppButton {
-                    text: "×"
-                    isPrimary: false
-                    isOutline: false
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
-                    horizontalPadding: 0
-                    verticalPadding: 0
-                    enabled: !root.submitting
-                    contentItem: Text {
-                        text: "×"
-                        color: Theme.textPrimary
-                        font.pixelSize: 14
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Text {
+                                text: root.editing ? "Edit Column on " : "Add Column to "
+                                color: Theme.textPrimary
+                                font.pixelSize: 20
+                                font.bold: true
+                            }
+
+                            Text {
+                                text: root.schemaName.length > 0 ? root.schemaName : "default"
+                                color: Theme.textSecondary
+                                font.pixelSize: 20
+                                font.bold: true
+                            }
+
+                            Text {
+                                text: "."
+                                color: Theme.textSecondary
+                                font.pixelSize: 20
+                                font.bold: true
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.tableName
+                                color: root.accentColor
+                                font.pixelSize: 20
+                                font.bold: true
+                                elide: Text.ElideMiddle
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.editing
+                                  ? "Adjust the column definition and save the schema changes."
+                                  : "Configure the new column details before applying changes."
+                            color: Theme.textSecondary
+                            font.pixelSize: 12
+                            wrapMode: Text.WordWrap
+                        }
                     }
-                    onClicked: root.close()
+
+                    AppButton {
+                        text: "Close"
+                        isPrimary: false
+                        enabled: !root.submitting
+                        onClicked: root.close()
+                    }
                 }
             }
         }
 
         ScrollView {
+            id: bodyScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            contentWidth: availableWidth
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
             Item {
-                width: Math.max(parent.width, 1)
-                implicitHeight: formContent.implicitHeight + (Theme.spacingLarge * 2)
+                width: Math.max(bodyScroll.availableWidth, 1)
+                implicitHeight: bodyContent.implicitHeight + (Theme.spacingLarge * 2)
 
                 ColumnLayout {
-                    id: formContent
+                    id: bodyContent
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
@@ -213,174 +295,213 @@ Popup {
                     anchors.topMargin: Theme.spacingLarge
                     spacing: Theme.spacingLarge
 
-                    Rectangle {
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        color: Theme.tintColor(Theme.background, root.accentColor, 0.06)
-                        border.color: Theme.tintColor(Theme.border, root.accentColor, 0.35)
-                        border.width: 1
-                        radius: Theme.radius
-                        visible: root.errorMessage.length > 0
+                        spacing: Theme.spacingSmall
 
                         Text {
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.margins: Theme.spacingMedium
-                            text: root.errorMessage
+                            Layout.fillWidth: true
+                            text: "SQL preview"
                             color: Theme.textPrimary
                             font.pixelSize: 12
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
-
-                        Text {
-                            text: "Column name"
-                            color: Theme.textSecondary
-                            font.pixelSize: 11
                             font.bold: true
                         }
 
-                        AppTextField {
+                        TextArea {
+                            id: previewSql
                             Layout.fillWidth: true
-                            accentColor: root.accentColor
-                            enabled: !root.submitting
-                            text: root.nameValue
-                            onTextChanged: root.nameValue = text
+                            readOnly: true
+                            selectByMouse: true
+                            wrapMode: TextEdit.WrapAnywhere
+                            leftPadding: 0
+                            rightPadding: 0
+                            topPadding: 0
+                            bottomPadding: 0
+                            text: root.previewSqlText()
+                            color: Theme.textPrimary
+                            selectionColor: Theme.accent
+                            selectedTextColor: "#FFFFFF"
+                            background: Rectangle { color: "transparent" }
+                            font.pixelSize: 11
+                            font.family: Qt.platform.os === "osx" ? "Menlo" : "Monospace"
+                            implicitHeight: Math.max(40, contentHeight)
+                        }
+
+                        SqlSyntaxHighlighter {
+                            document: previewSql.textDocument
+                            keywordColor: Theme.accentSecondary
+                            stringColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[3], 0.55)
+                            numberColor: Theme.tintColor(Theme.textPrimary, Theme.connectionAvatarColors[8], 0.65)
+                            commentColor: Theme.textSecondary
                         }
                     }
 
-                    ColumnLayout {
+                    GridLayout {
                         Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
+                        columns: root.width >= 680 ? 2 : 1
+                        columnSpacing: Theme.spacingMedium
+                        rowSpacing: Theme.spacingMedium
 
-                        Text {
-                            text: "Type"
-                            color: Theme.textSecondary
-                            font.pixelSize: 11
-                            font.bold: true
-                        }
-
-                        AppTextField {
+                        Rectangle {
                             Layout.fillWidth: true
-                            accentColor: root.accentColor
-                            enabled: !root.submitting
-                            text: root.typeValue
-                            placeholderText: "int4, text, uuid, numeric(10,2)..."
-                            onTextChanged: root.typeValue = text
-                        }
-                    }
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.width: 0
+                            implicitHeight: nameCardContent.implicitHeight + (Theme.spacingMedium * 2)
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Theme.spacingLarge
+                            ColumnLayout {
+                                id: nameCardContent
+                                anchors.fill: parent
+                                anchors.margins: Theme.spacingMedium
+                                spacing: Theme.spacingSmall
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
+                                Text {
+                                    text: "Name"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
 
-                        Text {
-                            text: "Nullable"
-                            color: Theme.textSecondary
-                            font.pixelSize: 11
-                            font.bold: true
-                        }
-
-                        CheckBox {
-                            enabled: !root.submitting && !root.primaryKeyValue
-                            text: root.primaryKeyValue ? "false (primary key)" : (root.nullableValue ? "true" : "false")
-                            checked: root.nullableValue
-                            onToggled: root.nullableValue = checked
-                        }
-                    }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
-
-                        Text {
-                            text: "Primary key"
-                            color: Theme.textSecondary
-                            font.pixelSize: 11
-                            font.bold: true
+                                AppTextField {
+                                    Layout.fillWidth: true
+                                    accentColor: root.accentColor
+                                    enabled: !root.submitting
+                                    text: root.nameValue
+                                    placeholderText: "column_name"
+                                    onTextChanged: root.nameValue = text
+                                }
+                            }
                         }
 
-                        CheckBox {
-                            enabled: !root.submitting
-                            text: root.primaryKeyValue ? "true" : "false"
-                            checked: root.primaryKeyValue
-                            onToggled: {
-                                root.primaryKeyValue = checked
-                                if (checked) {
-                                    root.nullableValue = false
+                        Rectangle {
+                            Layout.fillWidth: true
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.width: 0
+                            implicitHeight: typeCardContent.implicitHeight + (Theme.spacingMedium * 2)
+
+                            ColumnLayout {
+                                id: typeCardContent
+                                anchors.fill: parent
+                                anchors.margins: Theme.spacingMedium
+                                spacing: Theme.spacingSmall
+
+                                Text {
+                                    text: "Type"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
+
+                                AppTextField {
+                                    Layout.fillWidth: true
+                                    accentColor: root.accentColor
+                                    enabled: !root.submitting
+                                    text: root.typeValue
+                                    placeholderText: "int4, text, uuid..."
+                                    onTextChanged: root.typeValue = text
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.columnSpan: columns
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.width: 0
+                            implicitHeight: defaultCardContent.implicitHeight + (Theme.spacingMedium * 2)
+
+                            ColumnLayout {
+                                id: defaultCardContent
+                                anchors.fill: parent
+                                anchors.margins: Theme.spacingMedium
+                                spacing: Theme.spacingSmall
+
+                                Text {
+                                    text: "Default Value (Expression)"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
+
+                                AppTextField {
+                                    Layout.fillWidth: true
+                                    accentColor: root.accentColor
+                                    enabled: !root.submitting
+                                    text: root.defaultExprValue
+                                    placeholderText: "e.g. 0, 'active', now()"
+                                    onTextChanged: root.defaultExprValue = text
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.columnSpan: columns
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.width: 0
+                            implicitHeight: constraintCardContent.implicitHeight + (Theme.spacingMedium * 2)
+
+                            ColumnLayout {
+                                id: constraintCardContent
+                                anchors.fill: parent
+                                anchors.margins: Theme.spacingMedium
+                                spacing: Theme.spacingSmall
+
+                                Text {
+                                    text: "Constraints"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
+
+                                RowLayout {
+                                    spacing: Theme.spacingXLarge
+
+                                    CheckBox {
+                                        enabled: !root.submitting && !root.primaryKeyValue
+                                        text: "Nullable"
+                                        checked: root.nullableValue
+                                        onToggled: root.nullableValue = checked
+
+                                        contentItem: Text {
+                                            text: parent.text
+                                            font.pixelSize: 13
+                                            color: parent.enabled ? Theme.textPrimary : Theme.textSecondary
+                                            verticalAlignment: Text.AlignVCenter
+                                            leftPadding: parent.indicator.width + parent.spacing
+                                        }
+                                    }
+
+                                    CheckBox {
+                                        enabled: !root.submitting
+                                        text: "Primary Key"
+                                        checked: root.primaryKeyValue
+                                        onToggled: {
+                                            root.primaryKeyValue = checked
+                                            if (checked) {
+                                                root.nullableValue = false
+                                            }
+                                        }
+
+                                        contentItem: Text {
+                                            text: parent.text
+                                            font.pixelSize: 13
+                                            color: parent.enabled ? Theme.textPrimary : Theme.textSecondary
+                                            verticalAlignment: Text.AlignVCenter
+                                            leftPadding: parent.indicator.width + parent.spacing
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                    ColumnLayout {
+                    Item {
                         Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
-
-                    Text {
-                        text: "Default value"
-                        color: Theme.textSecondary
-                        font.pixelSize: 11
-                        font.bold: true
-                    }
-
-                    AppTextField {
-                        Layout.fillWidth: true
-                        accentColor: root.accentColor
-                        enabled: !root.submitting
-                        text: root.defaultExprValue
-                        placeholderText: "SQL expression (e.g. 0, 'abc', NOW())"
-                        onTextChanged: root.defaultExprValue = text
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Theme.spacingSmall
-
-                    Text {
-                        text: "SQL preview"
-                        color: Theme.textPrimary
-                        font.pixelSize: 12
-                        font.bold: true
-                    }
-
-                    TextArea {
-                        id: previewSql
-                        Layout.fillWidth: true
-                        readOnly: true
-                        selectByMouse: true
-                        wrapMode: TextEdit.WrapAnywhere
-                        leftPadding: 0
-                        rightPadding: 0
-                        topPadding: 0
-                        bottomPadding: 0
-                        text: root.previewSqlText()
-                        color: Theme.textPrimary
-                        selectionColor: root.accentColor
-                        selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: "transparent" }
-                        font.pixelSize: 11
-                        font.family: Qt.platform.os === "osx" ? "Menlo" : "Monospace"
-                        implicitHeight: Math.max(54, contentHeight)
-                    }
-
-                    SqlSyntaxHighlighter {
-                        document: previewSql.textDocument
-                        keywordColor: root.accentColor
-                        stringColor: Theme.tintColor(Theme.textPrimary, root.accentColor, 0.35)
-                        numberColor: Theme.tintColor(Theme.textPrimary, root.accentColor, 0.55)
-                        commentColor: Theme.textSecondary
-                    }
+                        Layout.preferredHeight: Theme.spacingSmall
                     }
                 }
             }
@@ -391,52 +512,69 @@ Popup {
             color: Theme.surface
             border.color: Theme.border
             border.width: 1
-            implicitHeight: footerRow.implicitHeight + (Theme.spacingMedium * 2)
+            implicitHeight: footerContent.implicitHeight + (Theme.spacingLarge * 2)
 
-            RowLayout {
-                id: footerRow
+            ColumnLayout {
+                id: footerContent
                 anchors.fill: parent
-                anchors.leftMargin: Theme.spacingLarge
-                anchors.rightMargin: Theme.spacingLarge
-                anchors.topMargin: Theme.spacingMedium
-                anchors.bottomMargin: Theme.spacingMedium
-                spacing: Theme.spacingMedium
+                anchors.margins: Theme.spacingLarge
+                spacing: Theme.spacingLarge
 
-                AppButton {
-                    text: "Cancel"
-                    isPrimary: false
-                    enabled: !root.submitting
-                    onClicked: root.close()
+                Rectangle {
+                    Layout.fillWidth: true
+                    visible: root.errorMessage.length > 0
+                    Layout.preferredHeight: root.errorMessage.length > 0 ? footerErrorText.implicitHeight + (Theme.spacingMedium * 2) : 0
+                    radius: Theme.radius
+                    color: Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.12)
+                    border.color: Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.38)
+                    border.width: 1
+
+                    Text {
+                        id: footerErrorText
+                        anchors.fill: parent
+                        anchors.margins: Theme.spacingMedium
+                        wrapMode: Text.WordWrap
+                        text: root.errorMessage
+                        color: Theme.error
+                        font.pixelSize: 12
+                    }
                 }
 
-                Item { Layout.fillWidth: true }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spacingMedium
 
-                AppButton {
-                    text: root.submitting ? "Saving..." : "Save"
-                    isPrimary: true
-                    accentColor: root.accentColor
-                    enabled: !root.submitting
-                    onClicked: {
-                        var payload = {
-                            mode: root.editing ? "edit" : "add",
-                            schema: root.schemaName,
-                            table: root.tableName,
-                            primaryKeyConstraintName: root.primaryKeyConstraintName,
-                            existingPkColumns: root.existingPkColumns,
-                            name: root.nameValue,
-                            type: root.typeValue,
-                            nullable: root.effectiveNullable(),
-                            defaultExpr: root.defaultExprValue,
-                            primaryKey: root.primaryKeyValue,
-                            originalName: root.originalName,
-                            originalType: root.originalType,
-                            originalNullable: root.originalNullable,
-                            originalDefaultExpr: root.originalDefaultExpr,
-                            originalPrimaryKey: root.originalPrimaryKey
-                        }
-                        root.errorMessage = ""
-                        root.submitting = true
-                        root.submitRequested(payload)
+                    AppButton {
+                        text: "Reset Values"
+                        isOutline: true
+                        accentColor: root.accentColor
+                        enabled: !root.submitting
+                        onClicked: root.resetDraftValues()
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Tip: Default value is treated as a raw SQL expression."
+                        color: Theme.textSecondary
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                    }
+
+                    AppButton {
+                        text: "Cancel"
+                        isPrimary: false
+                        enabled: !root.submitting
+                        onClicked: root.close()
+                    }
+
+                    AppButton {
+                        text: root.submitting
+                              ? (root.editing ? "Saving..." : "Creating...")
+                              : (root.editing ? "Save Changes" : "Add Column")
+                        isPrimary: true
+                        accentColor: root.accentColor
+                        enabled: !root.submitting
+                        onClicked: root.requestSubmit()
                     }
                 }
             }
